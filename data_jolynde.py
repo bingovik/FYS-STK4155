@@ -102,39 +102,31 @@ Y_test_onehot = Y_test_onehot.toarray()
 import classes_jolynde
 
 #clf = classes_jolynde.logReg_scikit()
-
 #clf = classes_jolynde.logisticRegression()
 
-nn = classes_jolynde.NeuralNetwork(Xtrain, Y_train_onehot, n_categories = 2)
-
-nn.train()
-
-#models_ = []
-#models_.append(logReg_scikit())
+models_ = []
+models_.append(classes_jolynde.logReg_scikit())
+models_.append(classes_jolynde.logisticRegression())
 
 kfold = 10
 alpha = 0.1     #learning reate
 _lambda = 160
+
 
 # accuracy score
 clf.fit(Xtrain, ytrain)
 ypred = clf.predict(Xtest)
 print("Accuracy score:", accuracy_score(ytest, ypred))
 
-#scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
-#print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
+scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
+print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
 
-#print("Parameters:", clf.model.coef_)
+print("Parameters:", clf.model.coef_)
+
 
 
 
 """
-acc = []
-for model_ in models_:
-    #ypred = model_.predict(Xtest)
-    #accuracy = accuracy_score(y_test, ypred)
-    scores = cross_val_score(model_.model, X, y.ravel(), cv = kfold)
-    acc.append("{}: {}, {}".format(type(model_), scores.mean(), scores.std()*2))
-    #print("Accuracy score:", accuracy_score(y_test, ypred))
-for a in acc:
-    print("Accuracy", a)"""
+nn = classes_jolynde.NeuralNetwork(Xtrain, Y_train_onehot, n_categories = 2)
+nn.train()
+"""
