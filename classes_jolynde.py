@@ -16,6 +16,8 @@ from sklearn.model_selection import GridSearchCV
 
 import matplotlib.pyplot as plt
 import matplotlib.patches
+from project2_functions import *
+
 
 ##############################
 ######## LOGISTIC REGRESSION
@@ -25,7 +27,7 @@ class logReg_scikit:
     #def __init__(self)
 
     def build_model(self):
-        model = LogisticRegression()
+        model = LogisticRegression(fit_intercept = False)
         return model
 
     def fit(self, X, y):
@@ -38,25 +40,63 @@ class logReg_scikit:
 
     def predict(self, X):
         return self.model.predict(X)
+
+    def results(self, X, y):
+        results = self.fit(X, y)
+        return self.results.fit(X,y)
+
+
+class logisticRegression:
+
+	def __init__(self, _lambda = 0, alpha = 0.1):
+		self._lambda = _lambda; self.alpha = alpha;
+
+	def fit(self, X, y, max_iter = 1000):
+		_lambda = self._lambda; alpha = self.alpha
+		self.beta = np.zeros(X.shape[1])[:,None]
+		n = X.shape[0]
+		for i in range(max_iter):
+			y_pred = sigmoid(X@self.beta)
+			grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
+			self.beta = self.beta - alpha*grad
+
+	def train_track_test(self, X, y, X_test, y_test, max_iter = 100, plot = False, savefig = False, filename = ''):
+		_lambda = self._lambda; alpha = self.alpha
+		self.beta = np.zeros(X.shape[1])[:,None]
+		n = X.shape[0]
+		cross_entropy_train = np.zeros(max_iter)
+		cross_entropy_test = np.zeros(max_iter)
+		for i in range(max_iter):
+			y_pred = sigmoid(X@self.beta)
+			y_pred_test = sigmoid(X_test@self.beta)
+			cross_entropy_train[i] = categorical_cross_entropy(y_pred,y)
+			cross_entropy_test[i] = categorical_cross_entropy(y_pred_test,y_test)
+			#print(categorical_cross_entropy(y_pred,y),categorical_cross_entropy(y_pred_test,y_test))
+			grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
+			self.beta = self.beta - alpha*grad
+		if plot:
+			plot_several(np.repeat(np.arange(max_iter)[:,None], 2, axis=1),
+				np.hstack((cross_entropy_train[:,None],cross_entropy_test[:,None])),
+				['r-', 'b-'], ['train', 'test'],
+				'iterations', 'cross entropy', 'Cross entropy during training',
+				savefig = savefig, figname = filename)
+
+	def get_proba(self, X):
+		y_pred = sigmoid(X@self.beta)
+		return y_pred
+
+	def predict(self, X):
+		y_pred_outcome = sigmoid(X@self.beta)
+		y_pred_outcome[y_pred_outcome >= 0.5] = 1
+		y_pred_outcome[y_pred_outcome < 0.5] = 0
+		return y_pred_outcome
+
 """
 class logReg:
 
     def __init__(self, _lambda, alpha):
         self._lambda = _lambda
         self.alpha = alpha
-
-    def cost_function(self, theta, x, y):
-        # Computes the cost function for all the training samples
-        m = x.shape[0]
-        total_cost = -(1 / m) * np.sum(
-            y * np.log(probability(theta, x)) + (1 - y) * np.log(
-                1 - probability(theta, x)))
-        return total_cost
-
-    def gradient(self, theta, x, y):
-        # Computes the gradient of the cost function at the point theta
-        m = x.shape[0]
-        return (1 / m) * np.dot(x.T, sigmoid(net_input(theta, x)) - y)
 
     def build_model(self):
         model =
@@ -72,19 +112,3 @@ class logReg:
     def predict(self, X):
         return
 """
-
-
-
-# FUNCTIONS
-
-def sigmoid(x):
-    # Activation function used to map any real value between 0 and 1
-    return 1 / (1 + np.exp(-x))
-
-def net_input(theta, x):
-    # Computes the weighted sum of inputs
-    return np.dot(x, theta)
-
-def probabilities(theta, x):
-    # Returns the probability after passing through sigmoid
-    return sigmoid(net_input(theta, x))

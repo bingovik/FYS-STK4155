@@ -17,6 +17,10 @@ from sklearn.model_selection import cross_val_score
 import matplotlib.pyplot as plt
 import matplotlib.patches
 
+import statsmodels.api as sm
+from project2_functions import *
+
+
 
 
 # Read the data
@@ -80,34 +84,43 @@ X = ColumnTransformer(
     remainder="passthrough"
 ).fit_transform(X)
 
+#add bias column
+X = np.hstack((np.ones(X.shape[0])[:,None], X))
+
 # Split and scale the data
 seed = 1
 Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.2, random_state = seed)
 
 sc = StandardScaler()
-Xtrain = sc.fit_transform(Xtrain)
-Xtest = sc.transform(Xtest)
+Xtrain[:,1:] = sc.fit_transform(Xtrain[:,1:])
+Xtest[:,1:] = sc.transform(Xtest[:,1:])
 
 #Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencoder.fit_transform(ytest)
 
-from classes_jolynde import logReg_scikit
+import classes_jolynde
 #clf = classes_jolynde.logReg_scikit()
 
-models_ = []
-models_.append(logReg_scikit())
+clf = classes_jolynde.logisticRegression()
+
+#models_ = []
+#models_.append(logReg_scikit())
 
 kfold = 10
+alpha = 0.1     #learning reate
+_lambda = 160
 
-"""
 # accuracy score
-clf.fit(Xtrain, ytrain.ravel())
+clf.fit(Xtrain, ytrain)
 ypred = clf.predict(Xtest)
-print("Accuracy score:", accuracy_score(ytest.ravel(), ypred))
+print("Accuracy score:", accuracy_score(ytest, ypred))
 
-scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
-print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
+#scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
+#print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
 
-print("Parameters:", clf.model.coef_)
+#print("Parameters:", clf.model.coef_)
+
+
+
 """
 
 acc = []
@@ -120,4 +133,4 @@ for model_ in models_:
     #print("Accuracy score:", accuracy_score(y_test, ypred))
 
 for a in acc:
-    print("Accuracy", a)
+    print("Accuracy", a)"""

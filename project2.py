@@ -13,10 +13,10 @@ from sklearn.metrics import accuracy_score
 import scikitplot as skplt
 
 class logisticRegression:
-	
+
 	def __init__(self, _lambda = 0, alpha = 0.1):
 		self._lambda = _lambda; self.alpha = alpha;
-		
+
 	def train(self, X, y, max_iter = 100):
 		_lambda = self._lambda; alpha = self.alpha
 		self.beta = np.zeros(X.shape[1])[:,None]
@@ -83,11 +83,11 @@ df = df.drop(df[(df.EDUCATION == 0) |
                 (df.EDUCATION == 6)].index)
 df = df.drop(df[(df.MARRIAGE == 0)].index)
 
-# Features and targets 
+# Features and targets
 X = df.loc[:, df.columns != 'defaultPaymentNextMonth'].values
 y = df.loc[:, df.columns == 'defaultPaymentNextMonth'].values
 
-# Categorical variables to one-hot's: 
+# Categorical variables to one-hot's:
 onehotencoder = OneHotEncoder(categories="auto")
 
 #hard code Sex and Marrital status, should also take maybe education
@@ -117,7 +117,7 @@ max_iter = 1000
 k = 10 #for k-folds cv
 
 
-#creating and training logistic regression model 
+#creating and training logistic regression model
 lg = logisticRegression(_lambda, alpha)
 #lg.train(X_train, y_train, max_iter)
 lg.train_track_test(X_train, y_train, X_test, y_test, max_iter, plot = True, savefig = False)
@@ -126,7 +126,8 @@ lg.train_track_test(X_train, y_train, X_test, y_test, max_iter, plot = True, sav
 y_test_pred = lg.predict(X_test)
 y_test_pred_outcome = lg.predict_outcome(X_test)
 accuracy_test = accuracy_score(y_test, y_test_pred_outcome)
-#calculate area ratio and plot lift chart 
+print(accuracy_test)
+#calculate area ratio and plot lift chart
 area_ratio = lift_chart(y_test,y_test_pred, plot = True, title = 'Lift chart: Logistic regression', savefig = False)
 
 #precision-recall
