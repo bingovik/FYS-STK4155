@@ -78,7 +78,10 @@ df = df.drop(df[(df.PAY_AMT1 == 0) &
                 (df.PAY_AMT4 == 0) &
                 (df.PAY_AMT5 == 0) &
                 (df.PAY_AMT6 == 0)].index)
-# Should also remove Marriage=0 and Education=0,5,6
+df = df.drop(df[(df.EDUCATION == 0) |
+                (df.EDUCATION == 5) |
+                (df.EDUCATION == 6)].index)
+df = df.drop(df[(df.MARRIAGE == 0)].index)
 
 # Features and targets 
 X = df.loc[:, df.columns != 'defaultPaymentNextMonth'].values
@@ -107,9 +110,12 @@ X_test[:,1:] = sc.transform(X_test[:,1:])
 
 #setting hyper parameters
 alpha = 0.1 #learning reate
-_lambda = 0
-max_iter = 400
+_lambda = 160
+lambda_tests = np.logspace(1, 3, num = 8)
+alpha_tests = np.logspace(-1.5,0, num = 6)
+max_iter = 1000
 k = 10 #for k-folds cv
+
 
 #creating and training logistic regression model 
 lg = logisticRegression(_lambda, alpha)
@@ -120,7 +126,6 @@ lg.train_track_test(X_train, y_train, X_test, y_test, max_iter, plot = True, sav
 y_test_pred = lg.predict(X_test)
 y_test_pred_outcome = lg.predict_outcome(X_test)
 accuracy_test = accuracy_score(y_test, y_test_pred_outcome)
-
 #calculate area ratio and plot lift chart 
 area_ratio = lift_chart(y_test,y_test_pred, plot = True, title = 'Lift chart: Logistic regression', savefig = False)
 
@@ -131,9 +136,18 @@ area_ratio = lift_chart(y_test,y_test_pred, plot = True, title = 'Lift chart: Lo
 #cumulative gains/lift chart/area ratio
 
 #cross validation
-lg_cv = logisticRegression(_lambda, alpha)
-ce_val, ce_test, _, _, _ = cv(lg, k, categorical_cross_entropy, X_train, y_train, X_test, y_test)
+ce_val = np.zeros((len(lambda_tests),len(alpha_tests)))
+ce_test = np.zeros((len(lambda_tests),len(alpha_tests)))
+for i, lambda_test in enumerate(lambda_tests):
+	for j, alpha_test in enumerate(alpha_tests):
+		lg_cv = logisticRegression(lambda_test, alpha_test)
+		ce_val[i,j], ce_test[i,j], _, _, _ = cv(lg_cv, k, categorical_cross_entropy, X_train, y_train, X_test, y_test, max_iter)
+		print (ce_val[i,j], ce_test[i,j])
+heatmap(ce_val, 'CE Validation', 'learning rate', '\u03BB', lambda_tests, alpha_tests, True, savefig = True, figname = 'Images/ce')
+heatmap(ce_test, 'CE Test', 'learning rate', '\u03BB', lambda_tests, alpha_tests, True, savefig = True, figname = 'Images/ce')
 
+pdb.set_trace()
+slutt = 1
 '''
 # Change y to categorical using One-hot
 y_train_cat, y_test_cat = onehotencoder.fit_transform(y_train), onehotencoder.fit_transform(y_test)

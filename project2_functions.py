@@ -16,8 +16,6 @@ def lift_chart(y_test,y_test_pred, plot = False, title = 'Lift chart', savefig =
 	curve_model = np.cumsum(y_test_sorted)
 	curve_perfect_model = np.cumsum(-np.sort(-y_test, axis = 0))
 	curve_no_model = np.linspace(curve_perfect_model[-1]/len(y_test),curve_perfect_model[-1],num=len(y_test))
-	#fpr, tpr, thresholds = roc_curve(y_test, y_test_pred)
-	#roc_auc = auc(fpr,tpr)
 	area_model = auc(np.arange(len(y_test)), curve_model)
 	area_perfect_model = auc(np.arange(len(y_test)), curve_perfect_model)
 	area_no_model = auc(np.arange(len(y_test)), curve_no_model)
@@ -33,18 +31,18 @@ def lift_chart(y_test,y_test_pred, plot = False, title = 'Lift chart', savefig =
 def log_loss(y_pred, y, beta):
 	#accepts no categorical or sparse y
 	n = len(y)
-	log_loss = -(y.T@np.log(y_pred)+(1-y).T@np.log(1-y_pred))/n
+	categorical_cross_entropy = -(y.T@np.log(y_pred)+(1-y).T@np.log(1-y_pred))/n
 	regularization_term = 0.5*_lambda*beta[1:].T@beta[1:]/n
-	categorical_cross_entropy = log_loss[0,0] + regularization_term[0,0]
-	return categorical_cross_entropy
+	log_loss = categorical_cross_entropy[0,0] + regularization_term[0,0]
+	return log_loss
 
 def categorical_cross_entropy(y_pred, y):
 	#accepts no categorical or sparse y, y_pred
 	n = len(y)
-	log_loss = -(y.T@np.log(y_pred)+(1-y).T@np.log(1-y_pred))/n
-	return log_loss[0][0]
+	categorical_cross_entropy = -(y.T@np.log(y_pred)+(1-y).T@np.log(1-y_pred))/n
+	return categorical_cross_entropy[0][0]
 
-def cv(model, k, metric, X, y, X_test, y_test):
+def cv(model, k, metric, X, y, X_test, y_test, max_iter):
 	''' 
 	Performs k-fold cross validation on input design matrix x and target vector y.
 	Predictions are also calculated for the separate test set (X_test, y_test) in
@@ -53,9 +51,7 @@ def cv(model, k, metric, X, y, X_test, y_test):
 	k_size = int(np.floor(len(X)/k))
 	metric_val = np.zeros(k)
 	metric_test = np.zeros(k)
-	y_predict_cv_val = np.zeros((k_size,k))
 	y_predict_cv_test = np.zeros((len(X_test),k))
-	y_cv_val = np.zeros((k_size,k))
 
 	for i in range(k):
 		#k-fold cross vaildation
@@ -66,16 +62,16 @@ def cv(model, k, metric, X, y, X_test, y_test):
 		X_cv_train = X[~test_ind]
 		X_cv_val = X[test_ind]
 		y_cv_train = y[~test_ind]
-		y_cv_val[:,i] = np.squeeze(y[test_ind])
+		y_cv_val = y[test_ind]
 
 		#train model and predict on validation and test sets
-		model.train(X_cv_train, y_cv_train)
-		y_predict_cv_val[:,i] = np.squeeze(model.predict(X_cv_val))
+		model.train(X_cv_train, y_cv_train, max_iter = max_iter)
+		y_predict_cv_val = model.predict(X_cv_val)
 		y_predict_cv_test[:,i] = np.squeeze(model.predict(X_test))
 
 		#calculating metric on the validation and test sets
-		metric_val[i] = metric(y_predict_cv_val, y_cv_val)        
-		metric_test[i] = metric(y_predict_cv_test, y_test)        
+		metric_val[i] = metric(y_predict_cv_val, y_cv_val) 
+		metric_test[i] = metric(y_predict_cv_test[:,i][:,None], y_test)        
 
 	metric_val = np.mean(metric_val)
 	metric_test = np.mean(metric_test)
@@ -95,5 +91,16 @@ def plot_several(x_data, y_data, colors, labels, xlabel, ylabel, title, savefig 
     for i in range(x_data.shape[1]):
         plt.plot(x_data[:,i], y_data[:,i], label = labels[i])
     leg = ax.legend()
+    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight') 
+    plt.show()
+
+def heatmap(data, title, xlabel, ylabel, xticks, yticks, annotation, savefig = False, figname = ''):
+    ax = sns.heatmap(np.around(data, decimals=3), annot = annotation, linewidth=0.5)
+    sns.set(font_scale=0.56)
+    ax.set_title(title, fontsize = 11)
+    ax.set_xlabel(xlabel, fontsize = 9)
+    ax.set_ylabel(ylabel, fontsize = 9)
+    ax.set_xticklabels(xticks, rotation=90, fontsize = 9)
+    ax.set_yticklabels(yticks, rotation=0, fontsize = 9)
     if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight') 
     plt.show()
