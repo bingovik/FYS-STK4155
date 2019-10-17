@@ -17,10 +17,10 @@ from sklearn.model_selection import cross_val_score
 import matplotlib.pyplot as plt
 import matplotlib.patches
 
-import statsmodels.api as sm
+#import statsmodels.api as sm
 from project2_functions import *
 
-
+import pdb
 
 
 # Read the data
@@ -85,7 +85,7 @@ X = ColumnTransformer(
 ).fit_transform(X)
 
 #add bias column
-X = np.hstack((np.ones(X.shape[0])[:,None], X))
+#X = np.hstack((np.ones(X.shape[0])[:,None], X))
 
 # Split and scale the data
 seed = 1
@@ -95,12 +95,19 @@ sc = StandardScaler()
 Xtrain[:,1:] = sc.fit_transform(Xtrain[:,1:])
 Xtest[:,1:] = sc.transform(Xtest[:,1:])
 
-#Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencoder.fit_transform(ytest)
+Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencoder.fit_transform(ytest)
+Y_train_onehot = Y_train_onehot.toarray()
+Y_test_onehot = Y_test_onehot.toarray()
 
 import classes_jolynde
+
 #clf = classes_jolynde.logReg_scikit()
 
-clf = classes_jolynde.logisticRegression()
+#clf = classes_jolynde.logisticRegression()
+
+nn = classes_jolynde.NeuralNetwork(Xtrain, Y_train_onehot, n_categories = 2)
+
+nn.train()
 
 #models_ = []
 #models_.append(logReg_scikit())
@@ -122,15 +129,12 @@ print("Accuracy score:", accuracy_score(ytest, ypred))
 
 
 """
-
 acc = []
 for model_ in models_:
     #ypred = model_.predict(Xtest)
     #accuracy = accuracy_score(y_test, ypred)
     scores = cross_val_score(model_.model, X, y.ravel(), cv = kfold)
-
     acc.append("{}: {}, {}".format(type(model_), scores.mean(), scores.std()*2))
     #print("Accuracy score:", accuracy_score(y_test, ypred))
-
 for a in acc:
     print("Accuracy", a)"""
