@@ -12,9 +12,12 @@ from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_val_score
 
 import matplotlib.pyplot as plt
 import matplotlib.patches
+
+
 
 # Read the data
 df = pd.read_excel('./default of credit card clients.xls', header=1, skiprows = 0, index_col = 0)
@@ -86,3 +89,35 @@ Xtrain = sc.fit_transform(Xtrain)
 Xtest = sc.transform(Xtest)
 
 #Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencoder.fit_transform(ytest)
+
+from classes_jolynde import logReg_scikit
+#clf = classes_jolynde.logReg_scikit()
+
+models_ = []
+models_.append(logReg_scikit())
+
+kfold = 10
+
+"""
+# accuracy score
+clf.fit(Xtrain, ytrain.ravel())
+ypred = clf.predict(Xtest)
+print("Accuracy score:", accuracy_score(ytest.ravel(), ypred))
+
+scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
+print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
+
+print("Parameters:", clf.model.coef_)
+"""
+
+acc = []
+for model_ in models_:
+    #ypred = model_.predict(Xtest)
+    #accuracy = accuracy_score(y_test, ypred)
+    scores = cross_val_score(model_.model, X, y.ravel(), cv = kfold)
+
+    acc.append("{}: {}, {}".format(type(model_), scores.mean(), scores.std()*2))
+    #print("Accuracy score:", accuracy_score(y_test, ypred))
+
+for a in acc:
+    print("Accuracy", a)
