@@ -58,14 +58,16 @@ class NeuralNetwork:
         self.a = [0]*self.n_hidden_layers
         self.w = [0]*(self.n_hidden_layers + 1)
         self.bias = [0]*(self.n_hidden_layers + 1)
-        self.w[0] = np.random.randn(self.n_features, self.n_hidden_neurons[0])
+
+        #Kaiming initialization of weights (scaling normal random dist with sqrt(2/n))
+        self.w[0] = np.random.randn(self.n_features, self.n_hidden_neurons[0])*np.sqrt(2/self.n_features)
         self.bias[0] = np.zeros(self.n_hidden_neurons[0]) + 0.01
         
         for i in range(1,self.n_hidden_layers):
-            self.w[i] = np.random.randn(self.n_hidden_neurons[i-1], self.n_hidden_neurons[i])
+            self.w[i] = np.random.randn(self.n_hidden_neurons[i-1], self.n_hidden_neurons[i])*np.sqrt(2/self.n_hidden_neurons[i-1])
             self.bias[i] = np.zeros(self.n_hidden_neurons[i]) + 0.01
 
-        self.w[self.n_hidden_layers] = np.random.randn(self.n_hidden_neurons[self.n_hidden_layers-1], self.n_categories)
+        self.w[self.n_hidden_layers] = np.random.randn(self.n_hidden_neurons[self.n_hidden_layers-1], self.n_categories)*np.sqrt(2/self.n_hidden_neurons[self.n_hidden_layers-1])
         self.bias[self.n_hidden_layers] = np.zeros(self.n_categories) + 0.01
 
     def feed_forward(self):
