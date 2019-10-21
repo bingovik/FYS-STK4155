@@ -19,9 +19,9 @@ import matplotlib.patches
 
 #import statsmodels.api as sm
 from project2_functions import *
+import classes_jolynde
 
 import pdb
-
 
 # Read the data
 df = pd.read_excel('./default of credit card clients.xls', header=1, skiprows = 0, index_col = 0)
@@ -99,7 +99,12 @@ Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencod
 Y_train_onehot = Y_train_onehot.toarray()
 Y_test_onehot = Y_test_onehot.toarray()
 
-import classes_jolynde
+nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation = 'relu')
+nn.train(Xtrain,Y_train_onehot,eta = 0.01, epochs = 40)
+
+pdb.set_trace()
+
+accuracy_score(ytest,nnBingo.predict(Xtest))
 
 #clf = classes_jolynde.logReg_scikit()
 #clf = classes_jolynde.logisticRegression()
@@ -112,7 +117,6 @@ kfold = 10
 alpha = 0.1     #learning reate
 _lambda = 160
 
-
 # accuracy score
 clf.fit(Xtrain, ytrain)
 ypred = clf.predict(Xtest)
@@ -122,9 +126,6 @@ scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
 print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
 
 print("Parameters:", clf.model.coef_)
-
-
-
 
 """
 nn = classes_jolynde.NeuralNetwork(Xtrain, Y_train_onehot, n_categories = 2)

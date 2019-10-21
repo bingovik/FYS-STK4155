@@ -3,10 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import auc, roc_curve
 
-
 def sigmoid(x):
 	s = 1/(1+np.exp(-x))
 	return s
+
+def relu(x):
+	return np.reshape(x*(x>0),x.shape)
+
+def softmax(x):
+	#made numerically stable by subtracting max values
+	exp_term = np.exp(x - np.amax(x,axis = 1, keepdims = True))
+	return exp_term / np.sum(exp_term, axis=1, keepdims=True)
 
 def lift_chart(y_test,y_test_pred, plot = False, title = 'Lift chart', savefig = False, figname = ''):
 	#cumulative gains/lift chart/area ratio
