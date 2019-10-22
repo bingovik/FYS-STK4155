@@ -129,7 +129,12 @@ Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencod
 Y_train_onehot = Y_train_onehot.toarray()
 Y_test_onehot = Y_test_onehot.toarray()
 
-"""
+nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation = 'relu')
+nn.train(Xtrain,Y_train_onehot,eta = 0.01, epochs = 40)
+
+accuracy_score(ytest,nn.predict(Xtest))
+
+#clf = classes_jolynde.logReg_scikit()
 #### LOGISTIC REGRESSION
 clf = classes_jolynde.logReg_scikit()
 clf_pca = classes_jolynde.logReg_scikit()
