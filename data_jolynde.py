@@ -37,7 +37,6 @@ df.rename(index=str, columns={"default payment next month": "defaultPayment"}, i
 
 print('Value count payment default', df['defaultPayment'].value_counts())
 
-
 # Drop some data that is unregistered
 df = df.drop(df[(df.BILL_AMT1 == 0) &
                 (df.BILL_AMT2 == 0) &
@@ -58,24 +57,28 @@ df = df.drop(df[(df.EDUCATION == 0) |
                 (df.EDUCATION == 6)].index)
 
 df = df.drop(df[(df.MARRIAGE == 0)].index)
-"""
-# Plot the variables
-fig1, ax = plt.subplots(1,2)
-sns.countplot(x = df['EDUCATION'], hue = df['defaultPayment'], data = df, ax = ax[0])
-sns.countplot(x = df['MARRIAGE'], hue = df['defaultPayment'], data = df, ax = ax[1])
-fig1.savefig('./Images/Education_marriage_plot.png')
-#plt.show()
 
-fig2, ax = plt.subplots(figsize=(10,5), ncols=3, nrows=2)
-sns.countplot(x = df['PAY_0'], hue = df['defaultPayment'], data = df, ax = ax[0][0])
-sns.countplot(x = df['PAY_2'], hue = df['defaultPayment'], data = df, ax = ax[0][1])
-sns.countplot(x = df['PAY_3'], hue = df['defaultPayment'], data = df, ax = ax[0][2])
-sns.countplot(x = df['PAY_4'], hue = df['defaultPayment'], data = df, ax = ax[1][0])
-sns.countplot(x = df['PAY_5'], hue = df['defaultPayment'], data = df, ax = ax[1][1])
-sns.countplot(x = df['PAY_6'], hue = df['defaultPayment'], data = df, ax = ax[1][2])
-fig2.savefig('./Images/PAY_plots.png')
-#plt.show()
-"""
+# Remove outliers from the numerical values
+# the numerical cats are X1 (LIMIT_BAL), X5 (AGE), X12-X17 (BILL_AMT1-6) and X18-X23 (PAY_AMT1-6)
+df_num = df[list(df.loc[:,'BILL_AMT1':'BILL_AMT6']) +
+            list(df.loc[:,'PAY_AMT1':'PAY_AMT6']) +
+            ['AGE'] + ['LIMIT_BAL'] + ['defaultPayment']
+           ]
+df_num.astype(int)
+
+Q1 = df_num.loc[:, 'BILL_AMT1':'LIMIT_BAL'].quantile(0.25)
+Q3 = df_num.loc[:, 'BILL_AMT1':'LIMIT_BAL'].quantile(0.75)
+IQR = Q3 - Q1
+
+print(IQR)
+
+df_out = df_num[~((df_num < (Q1 - 1.5 * IQR)) |(df_num > (Q3 + 1.5 * IQR))).any(axis=1)]
+print('df_num shape', df_num.shape)
+print('df_num shape', df_out.shape)
+
+## NEXT JOIN OLD DF (THE NON-NUMERICAL VALUES) WITH DF_OUT 
+
+
 
 # Correlation matrix
 correlation_matrix = df.loc[:, df.columns != 'defaultPayment'].corr().round(1)
@@ -120,8 +123,9 @@ print(pca.n_components_)
 
 Xtrain_pca = pca.transform(Xtrain)
 Xtest_pca = pca.transform(Xtest)
-print(Xtrain_pca.shape)
+print('xtrain_pca_shape', Xtrain_pca.shape)
 
+"""
 #Xtrain_pca = np.hstack((np.ones(Xtrain.shape[0])[:,None], Xtrain_pca))
 #Xtest_pca = np.hstack((np.ones(Xtest.shape[0])[:,None], Xtest_pca))
 
@@ -153,7 +157,7 @@ print("Accuracy score:", accuracy_score(ytest, ypred))
 clf_pca.fit(Xtrain_pca, ytrain)
 ypred_pca = clf_pca.predict(Xtest_pca)
 print("Accuracy score PCA:", accuracy_score(ytest, ypred_pca))
-"""
+
 #scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
 #print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
 
@@ -176,6 +180,7 @@ print(classification_report(ytest, nn_sk_pred))
 pred_prob = nn_sk.predict(Xtest)[:, 1]
 print(pred_prob)
 lift_chart(ytest, pred_prob, plot = True)
+"""
 
 """
 labels = ['Class 0', 'Class 1']
