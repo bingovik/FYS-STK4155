@@ -17,6 +17,8 @@ from sklearn.model_selection import cross_val_score
 import matplotlib.pyplot as plt
 import matplotlib.patches
 
+from sklearn.decomposition import PCA
+
 #import statsmodels.api as sm
 from project2_functions import *
 import classes_jolynde
@@ -55,7 +57,7 @@ df = df.drop(df[(df.EDUCATION == 0) |
                 (df.EDUCATION == 6)].index)
 
 df = df.drop(df[(df.MARRIAGE == 0)].index)
-
+"""
 # Plot the variables
 fig1, ax = plt.subplots(1,2)
 sns.countplot(x = df['EDUCATION'], hue = df['defaultPayment'], data = df, ax = ax[0])
@@ -72,10 +74,19 @@ sns.countplot(x = df['PAY_5'], hue = df['defaultPayment'], data = df, ax = ax[1]
 sns.countplot(x = df['PAY_6'], hue = df['defaultPayment'], data = df, ax = ax[1][2])
 fig2.savefig('./Images/PAY_plots.png')
 #plt.show()
+"""
+
+# Correlation matrix
+correlation_matrix = df.loc[:, df.columns != 'defaultPayment'].corr().round(1)
+sns.heatmap(data=correlation_matrix, annot=True)
+plt.savefig('./Images/corr_matrix.png')
+plt.show()
+
 
 # Create the independent and dependent variables
 X = df.loc[:, df.columns != 'defaultPayment'].values
 y = df.loc[:, df.columns == 'defaultPayment'].values
+
 
 # Categorical variables to one-hot's
 onehotencoder = OneHotEncoder(categories="auto")
@@ -83,6 +94,10 @@ X = ColumnTransformer(
     [("", onehotencoder, [2, 3]),],
     remainder="passthrough"
 ).fit_transform(X)
+
+# Make sure its all integers, no float
+X.astype(int)
+y.astype(int)
 
 #add bias column
 #X = np.hstack((np.ones(X.shape[0])[:,None], X))
@@ -92,8 +107,22 @@ seed = 1
 Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.2, random_state = seed)
 
 sc = StandardScaler()
-Xtrain[:,1:] = sc.fit_transform(Xtrain[:,1:])
-Xtest[:,1:] = sc.transform(Xtest[:,1:])
+Xtrain = sc.fit_transform(Xtrain)
+Xtest = sc.transform(Xtest)
+
+# PCA
+pca = PCA(.95)  #.95 for the number of components parameter. It means that scikit-learn choose the minimum number of principal components such that 95% of the variance is retained.
+pca.fit(Xtrain)
+
+print(pca.n_components_)
+print(pca.components_)
+
+Xtrain_pca = pca.transform(Xtrain)
+Xtest_pca = pca.transform(Xtest)
+print(Xtrain_pca.shape)
+
+#Xtrain_pca = np.hstack((np.ones(Xtrain.shape[0])[:,None], Xtrain_pca))
+#Xtest_pca = np.hstack((np.ones(Xtest.shape[0])[:,None], Xtest_pca))
 
 Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencoder.fit_transform(ytest)
 Y_train_onehot = Y_train_onehot.toarray()
@@ -102,16 +131,14 @@ Y_test_onehot = Y_test_onehot.toarray()
 nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation = 'relu')
 nn.train(Xtrain,Y_train_onehot,eta = 0.01, epochs = 40)
 
-pdb.set_trace()
-
 accuracy_score(ytest,nn.predict(Xtest))
 
 #clf = classes_jolynde.logReg_scikit()
+#### LOGISTIC REGRESSION
+clf = classes_jolynde.logReg_scikit()
+clf_pca = classes_jolynde.logReg_scikit()
 #clf = classes_jolynde.logisticRegression()
-
-models_ = []
-models_.append(classes_jolynde.logReg_scikit())
-models_.append(classes_jolynde.logisticRegression())
+#clf_pca = classes_jolynde.logisticRegression()
 
 kfold = 10
 alpha = 0.1     #learning reate
@@ -122,12 +149,19 @@ clf.fit(Xtrain, ytrain)
 ypred = clf.predict(Xtest)
 print("Accuracy score:", accuracy_score(ytest, ypred))
 
-scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
-print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
+clf_pca.fit(Xtrain_pca, ytrain)
+ypred_pca = clf_pca.predict(Xtest_pca)
+print("Accuracy score PCA:", accuracy_score(ytest, ypred_pca))
 
-print("Parameters:", clf.model.coef_)
+#scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
+#print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
 
-"""
+#print("Parameters:", clf.model.coef_)
+
+##### NEURAL NETWORK
 nn = classes_jolynde.NeuralNetwork(Xtrain, Y_train_onehot, n_categories = 2)
 nn.train()
-"""
+
+nn_sk = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation = 'relu')
+nn_sk.train(Xtrain, Y_train_onehot, eta = 0.01, epochs = 40)
+accuracy_score(ytest,nn.predict(Xtest))
