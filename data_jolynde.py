@@ -100,9 +100,6 @@ X = ColumnTransformer(
 X.astype(int)
 y.astype(int)
 
-#add bias column
-#X = np.hstack((np.ones(X.shape[0])[:,None], X))
-
 # Split and scale the data
 seed = 1
 Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.2, random_state = seed)
@@ -121,9 +118,6 @@ print(pca.n_components_)
 Xtrain_pca = pca.transform(Xtrain)
 Xtest_pca = pca.transform(Xtest)
 print(Xtrain_pca.shape)
-
-#Xtrain_pca = np.hstack((np.ones(Xtrain.shape[0])[:,None], Xtrain_pca))
-#Xtest_pca = np.hstack((np.ones(Xtest.shape[0])[:,None], Xtest_pca))
 
 Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencoder.fit_transform(ytest)
 Y_train_onehot = Y_train_onehot.toarray()

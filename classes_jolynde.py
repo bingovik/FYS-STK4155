@@ -298,6 +298,7 @@ class logisticRegression:
 
 	def fit(self, X, y, max_iter = 1000):
 		_lambda = self._lambda; alpha = self.alpha
+        X = np.hstack((np.ones(X.shape[0])[:,None], X))
 		self.beta = np.zeros(X.shape[1])[:,None]
 		n = X.shape[0]
 		for i in range(max_iter):
@@ -327,13 +328,14 @@ class logisticRegression:
 				savefig = savefig, figname = filename)
 
 	def get_proba(self, X):
+        X = np.hstack((np.ones(X.shape[0])[:,None], X))
 		y_pred = sigmoid(X@self.beta)
 		return y_pred
 
 	def predict(self, X):
-		y_pred_outcome = sigmoid(X@self.beta)
-		y_pred_outcome[y_pred_outcome >= 0.5] = 1
-		y_pred_outcome[y_pred_outcome < 0.5] = 0
+        X = np.hstack((np.ones(X.shape[0])[:,None], X))
+		y_pred = sigmoid(X@self.beta)
+        y_pred_outcome = np.argmax(y_pred, axis=1)
 		return y_pred_outcome
 
 """
