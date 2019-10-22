@@ -93,9 +93,6 @@ class NeuralNetwork:
         #input and activation of output layer
         self.z[self.n_hidden_layers] = self.a[self.n_hidden_layers-1]@self.w[self.n_hidden_layers] + self.bias[self.n_hidden_layers]
         self.probabilities = softmax(self.z[self.n_hidden_layers])
-        if np.isnan(self.probabilities).any():
-            pdb.set_trace()
-        halg = 3
 
     def feed_forward_out(self, X):
         # feed-forward for output
@@ -176,9 +173,6 @@ class NeuralNetwork:
         #updating weights and bias      
         self.w = list(map(add, self.w, [-i*self.eta for i in w_grad]))
         self.bias = list(map(add, self.bias, [-i*self.eta for i in bias_grad]))
-        if np.isnan(self.w[0]).any():
-            pdb.set_trace()
-        halg = 3
 
     def predict(self, X):
         probabilities = self.feed_forward_out(X)
