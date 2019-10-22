@@ -35,18 +35,20 @@ from sklearn.model_selection import GridSearchCV
 import tensorflow as tf
 
 
-class NeuralNetwork:
+from sklearn.base import BaseEstimator, ClassifierMixin
 
-    def __init__(self, n_hidden_neurons=50, activation='sigmoid'):
+class NeuralNetwork(BaseEstimator, ClassifierMixin):
 
+    def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd = 0):
+        self.lmbd = lmbd
         if isinstance(n_hidden_neurons, int):
             n_hidden_neurons = (n_hidden_neurons,)
         self.n_hidden_neurons = n_hidden_neurons
         self.n_hidden_layers = len(n_hidden_neurons)
-        self.activation = activation
+        self.activation_function = activation_function
 
         #setting the activation function and its derivative of z
-        if activation == 'relu':
+        if activation_function == 'relu':
             self.activation = relu
             self.activation_z_derivative = self.relu_z_derivative
         else:
@@ -68,6 +70,7 @@ class NeuralNetwork:
         self.output_weights = np.random.randn(self.n_hidden_neurons[0], self.n_categories)
         self.output_bias = np.zeros(self.n_categories) + 0.01
         '''
+        #self.n_hidden_neurons = (self.n_hidden_neurons,)
         self.z = [0]*(self.n_hidden_layers + 1)
         self.a = [0]*self.n_hidden_layers
         self.w = [0]*(self.n_hidden_layers + 1)
@@ -189,16 +192,24 @@ class NeuralNetwork:
         self.w = list(map(add, self.w, [-i*self.eta for i in w_grad]))
         self.bias = list(map(add, self.bias, [-i*self.eta for i in bias_grad]))
 
-
     def predict(self, X):
         probabilities = self.feed_forward_out(X)
-        return np.argmax(probabilities, axis=1)
+        outcome = np.zeros(probabilities.shape)
+        outcome[probabilities>=0.5] = 1
+        return outcome
 
-    def predict_probabilities(self, X):
+    def predict_proba(self, X):
         probabilities = self.feed_forward_out(X)
+        print(probabilities)
         return probabilities
 
-    def train(self, X_data, Y_data, activation = 'sigmoid', epochs=10, batch_size=128, eta=0.1, lmbd=0.0):
+    def accuracy(y, y_pred):
+        print('halgen')
+        print(y)
+        print(y_pred)
+        return accuracy_score(y, y_pred)
+
+    def fit(self, X_data, Y_data, activation = 'sigmoid', epochs=10, batch_size=128, eta=0.1):
         self.X_data_full = X_data
         self.Y_data_full = Y_data
         self.n_categories = Y_data.shape[1]
@@ -208,7 +219,6 @@ class NeuralNetwork:
         self.batch_size = batch_size
         self.iterations = self.n_inputs // self.batch_size
         self.eta = eta
-        self.lmbd = lmbd
         self.create_biases_and_weights()
         data_indices = np.arange(self.n_inputs)
 
@@ -293,50 +303,50 @@ class logReg_scikit:
 
 class logisticRegression:
 
-	def __init__(self, _lambda = 0, alpha = 0.1):
-		self._lambda = _lambda; self.alpha = alpha;
+    def __init__(self, _lambda = 0, alpha = 0.1):
+        self._lambda = _lambda; self.alpha = alpha
 
-	def fit(self, X, y, max_iter = 1000):
-		_lambda = self._lambda; alpha = self.alpha
+    def fit(self, X, y, max_iter = 1000):
+        _lambda = self._lambda; alpha = self.alpha
         X = np.hstack((np.ones(X.shape[0])[:,None], X))
-		self.beta = np.zeros(X.shape[1])[:,None]
-		n = X.shape[0]
-		for i in range(max_iter):
-			y_pred = sigmoid(X@self.beta)
-			grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
-			self.beta = self.beta - alpha*grad
+        self.beta = np.zeros(X.shape[1])[:,None]
+        n = X.shape[0]
+        for i in range(max_iter):
+            y_pred = sigmoid(X@self.beta)
+            grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
+            self.beta = self.beta - alpha*grad
 
-	def train_track_test(self, X, y, X_test, y_test, max_iter = 100, plot = False, savefig = False, filename = ''):
-		_lambda = self._lambda; alpha = self.alpha
-		self.beta = np.zeros(X.shape[1])[:,None]
-		n = X.shape[0]
-		cross_entropy_train = np.zeros(max_iter)
-		cross_entropy_test = np.zeros(max_iter)
-		for i in range(max_iter):
-			y_pred = sigmoid(X@self.beta)
-			y_pred_test = sigmoid(X_test@self.beta)
-			cross_entropy_train[i] = categorical_cross_entropy(y_pred,y)
-			cross_entropy_test[i] = categorical_cross_entropy(y_pred_test,y_test)
-			#print(categorical_cross_entropy(y_pred,y),categorical_cross_entropy(y_pred_test,y_test))
-			grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
-			self.beta = self.beta - alpha*grad
-		if plot:
-			plot_several(np.repeat(np.arange(max_iter)[:,None], 2, axis=1),
-				np.hstack((cross_entropy_train[:,None],cross_entropy_test[:,None])),
-				['r-', 'b-'], ['train', 'test'],
-				'iterations', 'cross entropy', 'Cross entropy during training',
-				savefig = savefig, figname = filename)
+    def train_track_test(self, X, y, X_test, y_test, max_iter = 100, plot = False, savefig = False, filename = ''):
+        _lambda = self._lambda; alpha = self.alpha
+        self.beta = np.zeros(X.shape[1])[:,None]
+        n = X.shape[0]
+        cross_entropy_train = np.zeros(max_iter)
+        cross_entropy_test = np.zeros(max_iter)
+        for i in range(max_iter):
+            y_pred = sigmoid(X@self.beta)
+            y_pred_test = sigmoid(X_test@self.beta)
+            cross_entropy_train[i] = categorical_cross_entropy(y_pred,y)
+            cross_entropy_test[i] = categorical_cross_entropy(y_pred_test,y_test)
+            #print(categorical_cross_entropy(y_pred,y),categorical_cross_entropy(y_pred_test,y_test))
+            grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
+            self.beta = self.beta - alpha*grad
+        if plot:
+            plot_several(np.repeat(np.arange(max_iter)[:,None], 2, axis=1),
+                np.hstack((cross_entropy_train[:,None],cross_entropy_test[:,None])),
+                ['r-', 'b-'], ['train', 'test'],
+                'iterations', 'cross entropy', 'Cross entropy during training',
+                savefig = savefig, figname = filename)
 
-	def get_proba(self, X):
+    def get_proba(self, X):
         X = np.hstack((np.ones(X.shape[0])[:,None], X))
-		y_pred = sigmoid(X@self.beta)
-		return y_pred
+        y_pred = sigmoid(X@self.beta)
+        return y_pred
 
-	def predict(self, X):
+    def predict(self, X):
         X = np.hstack((np.ones(X.shape[0])[:,None], X))
-		y_pred = sigmoid(X@self.beta)
+        y_pred = sigmoid(X@self.beta)
         y_pred_outcome = np.argmax(y_pred, axis=1)
-		return y_pred_outcome
+        return y_pred_outcome
 
 """
 class logReg:

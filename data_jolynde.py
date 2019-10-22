@@ -4,7 +4,7 @@ import numpy as np
 import random
 import seaborn as sns
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -123,8 +123,15 @@ Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencod
 Y_train_onehot = Y_train_onehot.toarray()
 Y_test_onehot = Y_test_onehot.toarray()
 
+#GridSearchCV on our own neural network
+parameters = {'n_hidden_neurons':((50,),(50,20)), 'activation_function':['sigmoid', 'relu'], 'lmbd':[0, 1]}
+nn = classes_jolynde.NeuralNetwork()
+clf = GridSearchCV(nn, parameters, scoring = 'accuracy', cv=5, verbose = 10)
+clf.fit(Xtrain,Y_train_onehot, eta = 0.01, epochs = 40)
+pdb.set_trace()
+
 nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation = 'relu')
-nn.train(Xtrain,Y_train_onehot,eta = 0.01, epochs = 40)
+nn.train(Xtrain,Y_train_onehot, eta = 0.01, epochs = 40)
 
 accuracy_score(ytest,nn.predict(Xtest))
 
@@ -142,6 +149,7 @@ _lambda = 160
 # accuracy score
 clf.fit(Xtrain, ytrain)
 ypred = clf.predict(Xtest)
+pdb.set_trace()
 print("Accuracy score:", accuracy_score(ytest, ypred))
 
 clf_pca.fit(Xtrain_pca, ytrain)
@@ -191,4 +199,3 @@ FN = conf[1, 0]
 
 print('Recall // Sensitivity:', (TP / float(FN + TP)))
 print('Precision:', TP / float(TP + FP))
-"""
