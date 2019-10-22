@@ -9,6 +9,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score
+from sklearn.metrics import classification_report
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
@@ -80,7 +81,7 @@ fig2.savefig('./Images/PAY_plots.png')
 correlation_matrix = df.loc[:, df.columns != 'defaultPayment'].corr().round(1)
 sns.heatmap(data=correlation_matrix, annot=True)
 plt.savefig('./Images/corr_matrix.png')
-plt.show()
+#plt.show()
 
 
 # Create the independent and dependent variables
@@ -115,7 +116,7 @@ pca = PCA(.95)  #.95 for the number of components parameter. It means that sciki
 pca.fit(Xtrain)
 
 print(pca.n_components_)
-print(pca.components_)
+#print(pca.components_)
 
 Xtrain_pca = pca.transform(Xtrain)
 Xtest_pca = pca.transform(Xtest)
@@ -128,6 +129,7 @@ Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencod
 Y_train_onehot = Y_train_onehot.toarray()
 Y_test_onehot = Y_test_onehot.toarray()
 
+"""
 #### LOGISTIC REGRESSION
 clf = classes_jolynde.logReg_scikit()
 clf_pca = classes_jolynde.logReg_scikit()
@@ -146,16 +148,48 @@ print("Accuracy score:", accuracy_score(ytest, ypred))
 clf_pca.fit(Xtrain_pca, ytrain)
 ypred_pca = clf_pca.predict(Xtest_pca)
 print("Accuracy score PCA:", accuracy_score(ytest, ypred_pca))
-
+"""
 #scores = cross_val_score(clf.model, X, y.ravel(), cv = kfold)
 #print("Accuracy_cv: %0.5f (+/- %0.5f)" % (scores.mean(), scores.std()*2))
 
 #print("Parameters:", clf.model.coef_)
 
 ##### NEURAL NETWORK
-nn = classes_jolynde.NeuralNetwork(Xtrain, Y_train_onehot, n_categories = 2)
-nn.train()
+#nn = classes_jolynde.NeuralNetwork(Xtrain, Y_train_onehot, n_categories = 2)
+#nn.train()
 
-nn_sk = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation = 'relu')
-nn_sk.train(Xtrain, Y_train_onehot, eta = 0.01, epochs = 40)
-accuracy_score(ytest,nn.predict(Xtest))
+nn_sk = classes_jolynde.Neural_scikit()
+nn_sk.fit(Xtrain, Y_train_onehot)
+nn_sk_pred = nn_sk.predict_class(Xtest)
+print(accuracy_score(ytest, nn_sk_pred))
+
+conf = confusion_matrix(ytest, nn_sk_pred)
+print(conf)
+
+print(classification_report(ytest, nn_sk_pred))
+
+pred_prob = nn_sk.predict(Xtest)[:, 1]
+print(pred_prob)
+lift_chart(ytest, pred_prob, plot = True)
+
+"""
+labels = ['Class 0', 'Class 1']
+
+fig4 = plt.figure()
+ax = fig4.add_subplot(111)
+cax = ax.matshow(conf, cmap=plt.cm.Blues)
+fig4.colorbar(cax)
+ax.set_xticklabels([''] + labels)
+ax.set_yticklabels([''] + labels)
+plt.xlabel('Predicted')
+plt.ylabel('Expected')
+#plt.show()
+
+TP = conf[1, 1]
+TN = conf[0, 0]
+FP = conf[0, 1]
+FN = conf[1, 0]
+
+print('Recall // Sensitivity:', (TP / float(FN + TP)))
+print('Precision:', TP / float(TP + FP))
+"""

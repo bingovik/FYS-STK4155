@@ -33,6 +33,7 @@ def lift_chart(y_test,y_test_pred, plot = False, title = 'Lift chart', savefig =
 						['r-', 'b-'], ['Model', 'Perfect model', 'Baseline'],
 						'Number of predictions', 'Cumulative number of defaults', title,
 						savefig = savefig, figname = figname)
+	print(area_ratio)
 	return area_ratio
 
 def log_loss(y_pred, y, beta):
@@ -50,7 +51,7 @@ def categorical_cross_entropy(y_pred, y):
 	return categorical_cross_entropy[0][0]
 
 def cv(model, k, metric, X, y, X_test, y_test, max_iter):
-	''' 
+	'''
 	Performs k-fold cross validation on input design matrix x and target vector y.
 	Predictions are also calculated for the separate test set (X_test, y_test) in
 	order to estimate bias and variance
@@ -77,14 +78,14 @@ def cv(model, k, metric, X, y, X_test, y_test, max_iter):
 		y_predict_cv_test[:,i] = np.squeeze(model.predict(X_test))
 
 		#calculating metric on the validation and test sets
-		metric_val[i] = metric(y_predict_cv_val, y_cv_val) 
-		metric_test[i] = metric(y_predict_cv_test[:,i][:,None], y_test)        
+		metric_val[i] = metric(y_predict_cv_val, y_cv_val)
+		metric_test[i] = metric(y_predict_cv_test[:,i][:,None], y_test)
 
 	metric_val = np.mean(metric_val)
 	metric_test = np.mean(metric_test)
 
-	#calculating MSE, variance and (bias + random noise) on the separate test set  
-	MSE_test = np.mean(np.mean((y_test[:,None] - y_predict_cv_test)**2, axis=0, keepdims=True))    
+	#calculating MSE, variance and (bias + random noise) on the separate test set
+	MSE_test = np.mean(np.mean((y_test[:,None] - y_predict_cv_test)**2, axis=0, keepdims=True))
 	variance_test = np.mean(np.var(y_predict_cv_test, axis=1))
 	bias_test_plus_noise = np.mean((y_test[:,None] - np.mean(y_predict_cv_test, axis=1, keepdims=True))**2)
 
@@ -94,11 +95,11 @@ def plot_several(x_data, y_data, colors, labels, xlabel, ylabel, title, savefig 
     fig, ax = plt.subplots()
     plt.xlabel(xlabel, fontsize = 9)
     plt.ylabel(ylabel, fontsize = 9)
-    ax.set_title(title, fontsize = 11)    
+    ax.set_title(title, fontsize = 11)
     for i in range(x_data.shape[1]):
         plt.plot(x_data[:,i], y_data[:,i], label = labels[i])
     leg = ax.legend()
-    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight') 
+    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight')
     plt.show()
 
 def heatmap(data, title, xlabel, ylabel, xticks, yticks, annotation, savefig = False, figname = ''):
@@ -109,5 +110,5 @@ def heatmap(data, title, xlabel, ylabel, xticks, yticks, annotation, savefig = F
     ax.set_ylabel(ylabel, fontsize = 9)
     ax.set_xticklabels(xticks, rotation=90, fontsize = 9)
     ax.set_yticklabels(yticks, rotation=0, fontsize = 9)
-    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight') 
+    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight')
     plt.show()

@@ -20,6 +20,20 @@ from project2_functions import *
 
 from operator import add
 
+from random import choice
+import sys
+import os
+import keras
+from keras.models import Model
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, BatchNormalization
+from keras.optimizers import RMSprop
+from keras import regularizers
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.utils import class_weight
+from sklearn.model_selection import GridSearchCV
+import tensorflow as tf
+
 
 class NeuralNetwork:
 
@@ -93,9 +107,7 @@ class NeuralNetwork:
         #input and activation of output layer
         self.z[self.n_hidden_layers] = self.a[self.n_hidden_layers-1]@self.w[self.n_hidden_layers] + self.bias[self.n_hidden_layers]
         self.probabilities = softmax(self.z[self.n_hidden_layers])
-        if np.isnan(self.probabilities).any():
-            pdb.set_trace()
-        halg = 3
+
 
     def feed_forward_out(self, X):
         # feed-forward for output
@@ -176,9 +188,7 @@ class NeuralNetwork:
         #updating weights and bias
         self.w = list(map(add, self.w, [-i*self.eta for i in w_grad]))
         self.bias = list(map(add, self.bias, [-i*self.eta for i in bias_grad]))
-        if np.isnan(self.w[0]).any():
-            pdb.set_trace()
-        halg = 3
+
 
     def predict(self, X):
         probabilities = self.feed_forward_out(X)
@@ -210,6 +220,49 @@ class NeuralNetwork:
 
                 self.feed_forward()
                 self.backpropagation()
+
+
+class Neural_scikit:
+
+    def __init__(self, layer_sizes=[50],
+                batch_size=100,
+                epochs=10,
+                optimizer="Adam",
+                loss="binary_crossentropy",
+                alpha = 0.1):
+        self.layer_sizes = layer_sizes
+        self.batch_size = batch_size
+        self.epochs = epochs
+        self.optimizer = optimizer
+        self.loss = loss
+        self.alpha = alpha
+
+    def build_network(self, X, y):
+        model = Sequential()
+        model.add(BatchNormalization())
+        for layer_size in self.layer_sizes:
+            model.add(Dense(layer_size, activation='relu',kernel_regularizer=regularizers.l2(self.alpha)))
+        model.add(Dense(2, activation='softmax'))
+        model.compile(loss=self.loss,
+                      optimizer=self.optimizer,
+                      metrics=['accuracy'])
+        return model
+
+    def fit(self, X, y):
+        self.model = self.build_network(X, y)
+        self.model.fit(X, y, epochs=self.epochs, batch_size=self.batch_size, verbose=0)
+
+    def predict(self, Xtest):
+        return self.model.predict(Xtest)
+
+    def predict_class(self, Xtest):
+        return self.model.predict_classes(Xtest)
+
+    def accuracyscore(self, Xtest, ytest):
+        return self.model.evaluate(Xtest, ytest)
+        print(accuracy)
+
+
 
 ##############################
 ######## LOGISTIC REGRESSION
