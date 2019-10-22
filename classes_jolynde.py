@@ -24,7 +24,7 @@ from operator import add
 class NeuralNetwork:
 
     def __init__(self, n_hidden_neurons=50, activation='sigmoid'):
-        
+
         if isinstance(n_hidden_neurons, int):
             n_hidden_neurons = (n_hidden_neurons,)
         self.n_hidden_neurons = n_hidden_neurons
@@ -41,13 +41,13 @@ class NeuralNetwork:
 
     def sigmoid_z_derivative(self, i):
         return self.a[i]*(1-self.a[i])
-    
+
     def relu_z_derivative(self, i):
         #return 1 if z>0 and keeping dimensions
         return np.reshape(self.z[i]>0,self.z[i].shape).astype(int)
-    
+
     def create_biases_and_weights(self):
-        '''        
+        '''
         self.hidden_weights = np.random.randn(self.n_features, self.n_hidden_neurons[0])
         self.hidden_bias = np.zeros(self.n_hidden_neurons[0]) + 0.01
 
@@ -62,7 +62,7 @@ class NeuralNetwork:
         #Kaiming initialization of weights (scaling normal random dist with sqrt(2/n))
         self.w[0] = np.random.randn(self.n_features, self.n_hidden_neurons[0])*np.sqrt(2/self.n_features)
         self.bias[0] = np.zeros(self.n_hidden_neurons[0]) + 0.01
-        
+
         for i in range(1,self.n_hidden_layers):
             self.w[i] = np.random.randn(self.n_hidden_neurons[i-1], self.n_hidden_neurons[i])*np.sqrt(2/self.n_hidden_neurons[i-1])
             self.bias[i] = np.zeros(self.n_hidden_neurons[i]) + 0.01
@@ -84,7 +84,7 @@ class NeuralNetwork:
         #initialize list of layer inputs z and activations (output) a
         self.z[0] = self.X_data@self.w[0] + self.bias[0]
         self.a[0] = self.activation(self.z[0])
-        
+
         #looping through rest of hidden layers
         for i in range(1,self.n_hidden_layers):
             self.z[i] = self.a[i-1]@self.w[i] + self.bias[i]
@@ -104,7 +104,7 @@ class NeuralNetwork:
         a_h = sigmoid(z_h)
 
         z_o = a_h@self.output_weights + self.output_bias
-        
+
         exp_term = np.exp(z_o)
         probabilities = exp_term / np.sum(exp_term, axis=1, keepdims=True)
         return probabilities
@@ -150,8 +150,8 @@ class NeuralNetwork:
         self.output_bias -= self.eta * self.output_bias_gradient
         self.hidden_weights -= self.eta * self.hidden_weights_gradient
         self.hidden_bias -= self.eta * self.hidden_bias_gradient
-        ''' 
-        
+        '''
+
         #initialize error and gradient lists
         error = [0]*(self.n_hidden_layers + 1)
         w_grad = [0]*(self.n_hidden_layers + 1)
@@ -173,7 +173,7 @@ class NeuralNetwork:
         w_grad[0] = self.X_data.T@error[0] + self.lmbd * self.w[0]
         bias_grad[0] = np.sum(error[0], axis = 0)
 
-        #updating weights and bias      
+        #updating weights and bias
         self.w = list(map(add, self.w, [-i*self.eta for i in w_grad]))
         self.bias = list(map(add, self.bias, [-i*self.eta for i in bias_grad]))
         if np.isnan(self.w[0]).any():
@@ -207,7 +207,7 @@ class NeuralNetwork:
                 #mini-batch training data
                 self.X_data = self.X_data_full[self.batch_size*j:self.batch_size*(j+1)]
                 self.Y_data = self.Y_data_full[self.batch_size*j:self.batch_size*(j+1)]
-                
+
                 self.feed_forward()
                 self.backpropagation()
 
@@ -219,7 +219,7 @@ class logReg_scikit:
     #def __init__(self)
 
     def build_model(self):
-        model = LogisticRegression(fit_intercept = False)
+        model = LogisticRegression(fit_intercept = True)
         return model
 
     def fit(self, X, y):
