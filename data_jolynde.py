@@ -102,6 +102,8 @@ Y_test_onehot = Y_test_onehot.toarray()
 nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation = 'relu')
 nn.train(Xtrain,Y_train_onehot,eta = 0.01, epochs = 40)
 
+pdb.set_trace()
+
 accuracy_score(ytest,nn.predict(Xtest))
 
 #clf = classes_jolynde.logReg_scikit()
