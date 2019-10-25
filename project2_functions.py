@@ -5,6 +5,7 @@ from sklearn.metrics import auc, roc_curve
 
 def sigmoid(x):
 	s = 1/(1+np.exp(-x))
+	#s = (x>=0)/(1+np.exp(-x)) + (x<0)*exp(x)/(1+np.exp(x)) 
 	return s
 
 def relu(x):
@@ -33,7 +34,6 @@ def lift_chart(y_test,y_test_pred, plot = False, title = 'Lift chart', savefig =
 						['r-', 'b-'], ['Model', 'Perfect model', 'Baseline'],
 						'Number of predictions', 'Cumulative number of defaults', title,
 						savefig = savefig, figname = figname)
-	print(area_ratio)
 	return area_ratio
 
 def log_loss(y_pred, y, beta):
@@ -73,7 +73,7 @@ def cv(model, k, metric, X, y, X_test, y_test, max_iter):
 		y_cv_val = y[test_ind]
 
 		#train model and predict on validation and test sets
-		model.train(X_cv_train, y_cv_train, max_iter = max_iter)
+		model.fit(X_cv_train, y_cv_train, max_iter = max_iter)
 		y_predict_cv_val = model.predict(X_cv_val)
 		y_predict_cv_test[:,i] = np.squeeze(model.predict(X_test))
 
