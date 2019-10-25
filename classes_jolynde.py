@@ -209,7 +209,7 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
         print(y_pred)
         return accuracy_score(y, y_pred)
 
-    def fit(self, X_data, Y_data, activation = 'sigmoid', epochs=10, batch_size=128, eta=0.1):
+    def fit(self, X_data, Y_data, activation = 'sigmoid', epochs=10, batch_size=128, eta=0.1, X_test = [], y_test = []):
         self.X_data_full = X_data
         self.Y_data_full = Y_data
         self.n_categories = Y_data.shape[1]
@@ -221,6 +221,8 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
         self.eta = eta
         self.create_biases_and_weights()
         data_indices = np.arange(self.n_inputs)
+        acc_train = np.zeros(self.epochs)
+        acc_test = np.zeros(self.epochs)
 
         for i in range(self.epochs):
             for j in range(self.iterations):
@@ -230,6 +232,10 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
 
                 self.feed_forward()
                 self.backpropagation()
+
+            acc_train[i] = accuracy_score(self.Y_data_full, self.predict(self.X_data_full))
+            acc_test[i] = accuracy_score(y_test, self.predict(X_test))
+            print(acc_train[i], acc_test[i])
 
 
 class Neural_scikit:
