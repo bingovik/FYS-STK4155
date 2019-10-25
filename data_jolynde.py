@@ -60,14 +60,14 @@ df = df.drop(df[(df.MARRIAGE == 0)].index)
 
 
 # Plot the variables
-fig1, ax = plt.subplots(figsize = (14, 7), ncols = 3)
+fig1, ax = plt.subplots(figsize = (14, 6), ncols = 3)
 sns.countplot(x = df['EDUCATION'], hue = df['defaultPayment'], data = df, ax = ax[0])
 sns.countplot(x = df['MARRIAGE'], hue = df['defaultPayment'], data = df, ax = ax[1])
 sns.countplot(x = df['SEX'], hue = df['defaultPayment'], data = df, ax = ax[2])
 fig1.savefig('./Images/Education_marriage_sex_plot.png')
 #plt.show()
 
-fig2, ax = plt.subplots(figsize=(10,5), ncols=3, nrows=2)
+fig2, ax = plt.subplots(figsize=(10,8), ncols=3, nrows=2)
 sns.countplot(x = df['PAY_0'], hue = df['defaultPayment'], data = df, ax = ax[0][0])
 sns.countplot(x = df['PAY_2'], hue = df['defaultPayment'], data = df, ax = ax[0][1])
 sns.countplot(x = df['PAY_3'], hue = df['defaultPayment'], data = df, ax = ax[0][2])
@@ -166,9 +166,11 @@ g4.savefig('./Images/pairplot_PAY_AMT_out.png')
 """
 
 # Correlation matrix
-correlation_matrix = df.loc[:, df.columns != 'defaultPayment'].corr().round(1)
+#correlation_matrix = df.loc[:, df.columns != 'defaultPayment'].corr().round(1)
+correlation_matrix = df.corr().round(1)
+fig6, ax = plt.subplots(figsize=(15,15))
 sns.heatmap(data=correlation_matrix, annot=True)
-plt.savefig('./Images/corr_matrix.png')
+fig6.savefig('./Images/corr_matrix.png')
 #plt.show()
 
 
@@ -213,7 +215,7 @@ Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencod
 Y_train_onehot = Y_train_onehot.toarray()
 Y_test_onehot = Y_test_onehot.toarray()
 
-
+"""
 ##### NEURAL NETWORK
 
 
@@ -235,7 +237,7 @@ nn.train(Xtrain_pca,Y_train_onehot, eta = 0.01, epochs = 40)
 print('acc_pca:', accuracy_score(ytest, nn.predict(Xtest_pca))
 
 
-
+"""
 #### LOGISTIC REGRESSION
 
 clf = classes_jolynde.logReg_scikit()
@@ -250,7 +252,6 @@ _lambda = 160
 # accuracy score
 clf.fit(Xtrain, ytrain)
 ypred = clf.predict(Xtest)
-pdb.set_trace()
 print("Accuracy score:", accuracy_score(ytest, ypred))
 
 clf_pca.fit(Xtrain_pca, ytrain)
@@ -278,7 +279,7 @@ print(classification_report(ytest, nn_sk_pred))
 
 pred_prob = nn_sk.predict(Xtest)[:, 1]
 print(pred_prob)
-lift_chart(ytest, pred_prob, plot = True)
+#lift_chart(ytest, pred_prob, plot = True)
 
 labels = ['Class 0', 'Class 1']
 
