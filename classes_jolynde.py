@@ -4,49 +4,48 @@ import os
 import numpy as np
 import random
 import seaborn as sns
+import sys
+import os
+import keras
+from operator import add
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score
-
+from sklearn.utils import class_weight
+from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
+from sklearn.base import BaseEstimator, ClassifierMixin
 
 import matplotlib.pyplot as plt
 import matplotlib.patches
+
 from project2_functions import *
 
-from operator import add
-
-from random import choice
-import sys
-import os
-import keras
 from keras.models import Model
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, BatchNormalization
 from keras.optimizers import RMSprop
 from keras import regularizers
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.utils import class_weight
-from sklearn.model_selection import GridSearchCV
 import tensorflow as tf
 
 
-from sklearn.base import BaseEstimator, ClassifierMixin
-
 class NeuralNetwork(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd = 0):
+    def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd=0, epochs=10, batch_size=128, eta=0.01):
         self.lmbd = lmbd
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.eta = eta
+        self.activation_function = activation_function
         if isinstance(n_hidden_neurons, int):
             n_hidden_neurons = (n_hidden_neurons,)
         self.n_hidden_neurons = n_hidden_neurons
         self.n_hidden_layers = len(n_hidden_neurons)
-        self.activation_function = activation_function
-
+        
         #setting the activation function and its derivative of z
         if activation_function == 'relu':
             self.activation = relu
@@ -63,14 +62,7 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
         return np.reshape(self.z[i]>0,self.z[i].shape).astype(int)
 
     def create_biases_and_weights(self):
-        '''
-        self.hidden_weights = np.random.randn(self.n_features, self.n_hidden_neurons[0])
-        self.hidden_bias = np.zeros(self.n_hidden_neurons[0]) + 0.01
-
-        self.output_weights = np.random.randn(self.n_hidden_neurons[0], self.n_categories)
-        self.output_bias = np.zeros(self.n_categories) + 0.01
-        '''
-        #self.n_hidden_neurons = (self.n_hidden_neurons,)
+        #initialize list of layer inputs z and activations (output) a
         self.z = [0]*(self.n_hidden_layers + 1)
         self.a = [0]*self.n_hidden_layers
         self.w = [0]*(self.n_hidden_layers + 1)
@@ -89,16 +81,8 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
 
     def feed_forward(self):
         # feed-forward for training
-        '''
-        self.z_h = self.X_data@self.hidden_weights + self.hidden_bias
-        self.a_h = sigmoid(self.z_h)
-
-        self.z_o = self.a_h@self.output_weights + self.output_bias
-
-        exp_term = np.exp(self.z_o)
-        self.probabilities = exp_term / np.sum(exp_term, axis=1, keepdims=True)
-        '''
-        #initialize list of layer inputs z and activations (output) a
+        
+        #calculating first hidden layer input and activation
         self.z[0] = self.X_data@self.w[0] + self.bias[0]
         self.a[0] = self.activation(self.z[0])
 
@@ -111,20 +95,10 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
         self.z[self.n_hidden_layers] = self.a[self.n_hidden_layers-1]@self.w[self.n_hidden_layers] + self.bias[self.n_hidden_layers]
         self.probabilities = softmax(self.z[self.n_hidden_layers])
 
-
     def feed_forward_out(self, X):
         # feed-forward for output
-        '''
-        z_h = X@self.hidden_weights + self.hidden_bias
-        a_h = sigmoid(z_h)
 
-        z_o = a_h@self.output_weights + self.output_bias
-
-        exp_term = np.exp(z_o)
-        probabilities = exp_term / np.sum(exp_term, axis=1, keepdims=True)
-        return probabilities
-        '''
-        #initialize list of layer inputs z and activations (output) a
+        #calculating first hidden layer input and activation
         z = [0]*(self.n_hidden_layers + 1)
         a = [0]*self.n_hidden_layers
 
@@ -144,28 +118,6 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
         return probabilities
 
     def backpropagation(self):
-        '''
-        error_output = self.probabilities - self.Y_data #always the case if using cross entropy (and softmax last layer?)
-        error_hidden = error_output@self.output_weights.T * self.a_h * (1 - self.a_h) #last two factors change if using another activation function
-        #error_hidden = error_output@self.output_weights.T * sigmoid_derivative(self.z_h) #last two factors change if using another activation function
-        #error_hidden = error_output@self.output_weights.T * relu_derivative(self.z_h)
-        #error_hidden = error_output@self.output_weights.T * activation_derivative()
-
-        self.output_weights_gradient = self.a_h.T@error_output
-        self.output_bias_gradient = np.sum(error_output, axis=0)
-
-        self.hidden_weights_gradient = self.X_data.T@error_hidden
-        self.hidden_bias_gradient = np.sum(error_hidden, axis=0)
-
-        if self.lmbd > 0.0:
-            self.output_weights_gradient += self.lmbd * self.outputput_weights
-            self.hidden_weights_gradient += self.lmbd * self.hidden_weights
-
-        self.output_weights -= self.eta * self.output_weights_gradient
-        self.output_bias -= self.eta * self.output_bias_gradient
-        self.hidden_weights -= self.eta * self.hidden_weights_gradient
-        self.hidden_bias -= self.eta * self.hidden_bias_gradient
-        '''
 
         #initialize error and gradient lists
         error = [0]*(self.n_hidden_layers + 1)
@@ -200,27 +152,19 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
 
     def predict_proba(self, X):
         probabilities = self.feed_forward_out(X)
-        print(probabilities)
         return probabilities
 
     def accuracy(y, y_pred):
-        print('halgen')
-        print(y)
-        print(y_pred)
         return accuracy_score(y, y_pred)
 
-    def fit(self, X_data, Y_data, activation = 'sigmoid', epochs=10, batch_size=128, eta=0.1, X_test = [], y_test = []):
+    def fit(self, X_data, Y_data, X_test = [], y_test = [], plot_learning = False, savefig = False, filename = ''):
         self.X_data_full = X_data
         self.Y_data_full = Y_data
         self.n_categories = Y_data.shape[1]
         self.n_inputs = X_data.shape[0]
         self.n_features = X_data.shape[1]
-        self.epochs = epochs
-        self.batch_size = batch_size
         self.iterations = self.n_inputs // self.batch_size
-        self.eta = eta
         self.create_biases_and_weights()
-        data_indices = np.arange(self.n_inputs)
         acc_train = np.zeros(self.epochs)
         acc_test = np.zeros(self.epochs)
 
@@ -233,31 +177,43 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
                 self.feed_forward()
                 self.backpropagation()
 
-            acc_train[i] = accuracy_score(self.Y_data_full, self.predict(self.X_data_full))
-            acc_test[i] = accuracy_score(y_test, self.predict(X_test))
-            print(acc_train[i], acc_test[i])
+            if plot_learning:
+                acc_train[i] = accuracy_score(self.Y_data_full, self.predict(self.X_data_full))
+                acc_test[i] = accuracy_score(y_test, self.predict(X_test))
+                #acc_train[i] = categorical_cross_entropy(self.Y_data_full, self.predict(self.X_data_full))
+                #acc_test[i] = categorical_cross_entropy(y_test, self.predict(X_test))
 
+        if plot_learning:
+            plot_several(np.repeat(np.arange(1,self.epochs+1)[:,None], 2, axis=1),
+                np.hstack((acc_train[:,None],acc_test[:,None])),
+                ['r-', 'b-'], ['train', 'test'],
+                'Epochs', 'accuracy', 'Accuracy during training',
+                savefig = savefig, figname = filename)
 
-class Neural_scikit:
+        return acc_train, acc_test
+
+class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
 
     def __init__(self, layer_sizes=[50],
                 batch_size=100,
                 epochs=10,
                 optimizer="Adam",
                 loss="binary_crossentropy",
-                alpha = 0.1):
+                _lambda = 0.1,
+                activation_function = 'relu'):
         self.layer_sizes = layer_sizes
         self.batch_size = batch_size
         self.epochs = epochs
         self.optimizer = optimizer
         self.loss = loss
-        self.alpha = alpha
+        self._lambda = _lambda
+        self.activation_function = activation_function
 
     def build_network(self, X, y):
         model = Sequential()
         model.add(BatchNormalization())
         for layer_size in self.layer_sizes:
-            model.add(Dense(layer_size, activation='relu',kernel_regularizer=regularizers.l2(self.alpha)))
+            model.add(Dense(layer_size, activation=self.activation_function,kernel_regularizer=regularizers.l2(self._lambda)))
         model.add(Dense(2, activation='softmax'))
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
@@ -271,7 +227,7 @@ class Neural_scikit:
     def predict(self, Xtest):
         return self.model.predict(Xtest)
 
-    def predict_class(self, Xtest):
+    def predict_classes(self, Xtest):
         return self.model.predict_classes(Xtest)
 
     def accuracyscore(self, Xtest, ytest):
@@ -307,37 +263,39 @@ class logReg_scikit:
         return self.results.fit(X,y)
 
 
-class logisticRegression:
+class logisticRegression(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, _lambda = 0, alpha = 0.1):
-        self._lambda = _lambda; self.alpha = alpha
+    def __init__(self, _lambda = 0, eta = 0.1, max_iter = 1000):
+        self._lambda = _lambda; self.eta = eta; self.max_iter = max_iter
 
-    def fit(self, X, y, max_iter = 1000):
-        _lambda = self._lambda; alpha = self.alpha
+    def fit(self, X, y):
+        _lambda = self._lambda; eta = self.eta
         X = np.hstack((np.ones(X.shape[0])[:,None], X))
         self.beta = np.zeros(X.shape[1])[:,None]
         n = X.shape[0]
-        for i in range(max_iter):
+        for i in range(self.max_iter):
             y_pred = sigmoid(X@self.beta)
             grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
-            self.beta = self.beta - alpha*grad
+            self.beta = self.beta - eta*grad
 
-    def train_track_test(self, X, y, X_test, y_test, max_iter = 100, plot = False, savefig = False, filename = ''):
-        _lambda = self._lambda; alpha = self.alpha
+    def train_track_test(self, X, y, X_test, y_test, plot = False, savefig = False, filename = ''):
+        _lambda = self._lambda; eta = self.eta
+        X = np.hstack((np.ones(X.shape[0])[:,None], X))
+        X_test = np.hstack((np.ones(X_test.shape[0])[:,None], X))
         self.beta = np.zeros(X.shape[1])[:,None]
         n = X.shape[0]
-        cross_entropy_train = np.zeros(max_iter)
-        cross_entropy_test = np.zeros(max_iter)
-        for i in range(max_iter):
+        cross_entropy_train = np.zeros(self.max_iter)
+        cross_entropy_test = np.zeros(self.max_iter)
+        for i in range(self.max_iter):
             y_pred = sigmoid(X@self.beta)
             y_pred_test = sigmoid(X_test@self.beta)
             cross_entropy_train[i] = categorical_cross_entropy(y_pred,y)
             cross_entropy_test[i] = categorical_cross_entropy(y_pred_test,y_test)
             #print(categorical_cross_entropy(y_pred,y),categorical_cross_entropy(y_pred_test,y_test))
             grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
-            self.beta = self.beta - alpha*grad
+            self.beta = self.beta - eta*grad
         if plot:
-            plot_several(np.repeat(np.arange(max_iter)[:,None], 2, axis=1),
+            plot_several(np.repeat(np.arange(self.max_iter)[:,None], 2, axis=1),
                 np.hstack((cross_entropy_train[:,None],cross_entropy_test[:,None])),
                 ['r-', 'b-'], ['train', 'test'],
                 'iterations', 'cross entropy', 'Cross entropy during training',
@@ -349,9 +307,9 @@ class logisticRegression:
         return y_pred
 
     def predict(self, X):
-        X = np.hstack((np.ones(X.shape[0])[:,None], X))
-        y_pred = sigmoid(X@self.beta)
-        y_pred_outcome = np.argmax(y_pred, axis=1)
+        y_pred = self.get_proba(X)
+        y_pred_outcome = np.zeros(y_pred.shape)
+        y_pred_outcome[y_pred>=0.5] = 1
         return y_pred_outcome
 
 """

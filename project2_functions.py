@@ -16,7 +16,7 @@ def softmax(x):
 	exp_term = np.exp(x - np.amax(x,axis = 1, keepdims = True))
 	return exp_term / np.sum(exp_term, axis=1, keepdims=True)
 
-def lift_chart(y_test,y_test_pred, plot = False, title = 'Lift chart', savefig = False, figname = ''):
+def area_ratio(y_test,y_test_pred, plot = False, title = 'Lift chart', savefig = False, figname = ''):
 	#cumulative gains/lift chart/area ratio
 	sorting = np.argsort(-y_test_pred,axis = 0)
 	y_test_pred_sorted = y_test_pred[np.squeeze(sorting)]

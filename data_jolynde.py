@@ -3,28 +3,25 @@ import os
 import numpy as np
 import random
 import seaborn as sns
+import pdb
 
 from sklearn.model_selection import train_test_split, cross_validate
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score
 from sklearn.metrics import classification_report
-
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import cross_val_score
 
 import matplotlib.pyplot as plt
 import matplotlib.patches
 
-from sklearn.decomposition import PCA
-
 #import statsmodels.api as sm
 from project2_functions import *
 import classes_jolynde
-
-import pdb
 
 # Read the data
 df = pd.read_excel('./default of credit card clients.xls', header=1, skiprows = 0, index_col = 0)
@@ -76,7 +73,6 @@ sns.countplot(x = df['PAY_5'], hue = df['defaultPayment'], data = df, ax = ax[1]
 sns.countplot(x = df['PAY_6'], hue = df['defaultPayment'], data = df, ax = ax[1][2])
 fig2.savefig('./Images/PAY_plots.png')
 #plt.show()
-
 
 # Remove outliers
 df_out = df.copy()
@@ -173,7 +169,6 @@ sns.heatmap(data=correlation_matrix, annot=True)
 fig6.savefig('./Images/corr_matrix.png')
 #plt.show()
 
-
 # Create the independent and dependent variables
 X = df.loc[:, df.columns != 'defaultPayment'].values
 y = df.loc[:, df.columns == 'defaultPayment'].values
@@ -188,18 +183,17 @@ X = ColumnTransformer(
     remainder="passthrough"
 ).fit_transform(X)
 
-# Make sure its all integers, no float
+# Make sure it's all integers, no float - to save memory/computational time?
 X.astype(int)
 y.astype(int)
 
 # Split and scale the data
-seed = 1
+seed = 0
 Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.2, random_state = seed)
 
 sc = StandardScaler()
 Xtrain = sc.fit_transform(Xtrain)
 Xtest = sc.transform(Xtest)
-
 
 # PCA
 pca = PCA(.95)  #.95 for the number of components parameter. It means that scikit-learn choose the minimum number of principal components such that 95% of the variance is retained.
@@ -210,34 +204,101 @@ Xtrain_pca = pca.transform(Xtrain)
 Xtest_pca = pca.transform(Xtest)
 print(Xtrain_pca.shape)
 
-
 Y_train_onehot, Y_test_onehot = onehotencoder.fit_transform(ytrain), onehotencoder.fit_transform(ytest)
 Y_train_onehot = Y_train_onehot.toarray()
 Y_test_onehot = Y_test_onehot.toarray()
 
-nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation_function = 'relu')
-nn.fit(Xtrain,Y_train_onehot, X_test = Xtest, y_test = Y_test_onehot, eta = 0.01, epochs = 40)
-pdb.set_trace()
-print(accuracy_score(ytest,nn.predict(Xtest)))
+nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = 50, activation_function = 'sigmoid', epochs = 40)
+nn.fit(Xtrain,Y_train_onehot, X_test = Xtest, y_test = Y_test_onehot, plot_learning = True)
 
-##### NEURAL NETWORK
+#GridSearchCV on our own logistic regression
+parameters = {'_lambda':[0, 0.1, 1, 10], 'eta':[0.01,0.1,1], 'max_iter':[100,500,1000]}
+logReg = classes_jolynde.logisticRegression()
+clf = GridSearchCV(logReg, parameters, scoring = 'accuracy', cv=5, verbose = 0)
+clf.fit(Xtrain,ytrain)
+df_grid_logReg = pd.DataFrame.from_dict(clf.cv_results_)
+
+#fit best logistic regression model and print metrics
+print(clf.best_params_)
+logRegBest = classes_jolynde.logisticRegression(**clf.best_params_)
+logRegBest.fit(Xtrain, ytrain)
+print('Classification report for logistic regression:')
+print(classification_report(ytest, logRegBest.predict(Xtest)))
+print('Accuracy: %g' % accuracy_score(ytest,logRegBest.predict(Xtest)))
+area_ratio_log = area_ratio(ytest, logRegBest.get_proba(Xtest))
+print('Area ratio: %g' % area_ratio_log)
+print('Confusion matrix for logistic regression:')
+conf = confusion_matrix(ytest, logRegBest.predict(Xtest))
+print(conf)
+
+#GridSearchCV on scikit-learn's logistic regression
+parameters = {'C':[0.1, 1, 10], 'max_iter':[100,500,1000]}
+logRegScikit = LogisticRegression()
+clf = GridSearchCV(logRegScikit, parameters, scoring = 'accuracy', cv=5, verbose = 0)
+clf.fit(Xtrain,ytrain)
+df_grid_logRegScikit = pd.DataFrame.from_dict(clf.cv_results_)
+
+#fit best Scikit learn logistic regression model and print metrics
+print(clf.best_params_)
+logRegScikitBest = LogisticRegression(**clf.best_params_)
+logRegScikitBest.fit(Xtrain, ytrain)
+print('Classification report for Scikit-learn logistic regression:')
+print(classification_report(ytest, logRegScikitBest.predict(Xtest)))
+print('Accuracy: %g' % accuracy_score(ytest,logRegScikitBest.predict(Xtest)))
+area_ratio_log_scikit = area_ratio(ytest, logRegScikitBest.predict_proba(Xtest)[:,1])
+print('Area ratio: %g' % area_ratio_log_scikit)
+print('Confusion matrix for Scikit-learn logistic regression:')
+conf = confusion_matrix(ytest, logRegScikitBest.predict(Xtest))
+print(conf)
 
 #GridSearchCV on our own neural network
-parameters = {'n_hidden_neurons':((50,),(50,20)), 'activation_function':['sigmoid', 'relu'], 'lmbd':[0, 1]}
-nn = classes_jolynde.NeuralNetwork()
-clf = GridSearchCV(nn, parameters, scoring = 'accuracy', cv=5, verbose = 10)
-clf.fit(Xtrain,Y_train_onehot, eta = 0.01, epochs = 40)
-pdb.set_trace()
+parameters = {'n_hidden_neurons':((10,),(50,),(50,20),(30,20,10)), 'activation_function':['sigmoid', 'relu'], 'lmbd':[0, 0.01, 0.03, 0.1], 'epochs':[10,40]}
+nn = classes_jolynde.NeuralNetwork(eta=0.005)
+clf = GridSearchCV(nn, parameters, scoring = 'accuracy', cv=5, verbose = 0)
+clf.fit(Xtrain,Y_train_onehot)
+df_grid_nn = pd.DataFrame.from_dict(clf.cv_results_)
 
+#fit best nn model and print metrics
+print(clf.best_params_)
+nnBest = classes_jolynde.NeuralNetwork(**clf.best_params_, eta=0.005)
+nnBest.fit(Xtrain, Y_train_onehot)
+print('Classification report for neural network:')
+print(classification_report(Y_test_onehot, nnBest.predict(Xtest)))
+print('Accuracy: %g' % accuracy_score(Y_test_onehot,nnBest.predict(Xtest)))
+area_ratio_nn = area_ratio(Y_test_onehot[:,1], nnBest.predict_proba(Xtest)[:,1])
+print('Area ratio: %g' % area_ratio_nn)
+print('Confusion matrix for neural network:')
+conf = confusion_matrix(Y_test_onehot[:,1], nnBest.predict(Xtest)[:,1])
+print(conf)
+'''
+#GridSearchCV on Tensorflow/Keras neural network
+parameters = {'layer_sizes':([10],[50],[50,20],[30,20,10]), 'activation_function':['sigmoid', 'tanh', 'relu'], '_lambda':[0, 0.01, 0.03, 0.1], 'epochs':[1,2]}
+nnTensor = classes_jolynde.Neural_TensorFlow()
+clf = GridSearchCV(nnTensor, parameters, scoring = 'accuracy', cv=5, verbose = 0)
+clf.fit(Xtrain,Y_train_onehot)
+df_grid_nn = pd.DataFrame.from_dict(clf.cv_results_)
+
+#fit best Tensorflow/Keras nn model and print metrics
+nnBestTensor = classes_jolynde.Neural_TensorFlow(**clf.best_params_)
+nnBestTensor.fit(Xtrain, Y_train_onehot)
+print('Classification report for TensorFlow neural network:')
+print(classification_report(Y_test_onehot, nnBestTensor.predict_classes(Xtest)))
+print('Accuracy: %g' % accuracy_score(Y_test_onehot,nnBestTensor.predict_classes(Xtest)))
+area_ratio_nn_Tensor = area_ratio(Y_test_onehot[:,1], nnBestTensor.predict(Xtest)[:,1], plot = True)
+print('Area ratio: %g' % area_ratio_nn_Tensor)
+print('Confusion matrix for TensorFlow neural network:')
+conf = confusion_matrix(Y_test_onehot[:,1], nnBestTensor.predict_classes(Xtest)[:,1])
+print(conf)
+'''
 #clf = classes_jolynde.logReg_scikit()
 
 nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation_function = "relu")
 nn.train(Xtrain,Y_train_onehot, eta = 0.01, epochs = 40)
-print('acc_normal:', accuracy_score(ytest, nn.predict(Xtest))
+#print('acc_normal:', accuracy_score(ytest, nn.predict(Xtest))
 
 nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = (50,20), activation_function = "relu")
 nn.train(Xtrain_pca,Y_train_onehot, eta = 0.01, epochs = 40)
-print('acc_pca:', accuracy_score(ytest, nn.predict(Xtest_pca))
+#print('acc_pca:', accuracy_score(ytest, nn.predict(Xtest_pca))
 
 
 #### LOGISTIC REGRESSION
@@ -298,3 +359,9 @@ FN = conf[1, 0]
 
 print('Recall // Sensitivity:', (TP / float(FN + TP)))
 print('Precision:', TP / float(TP + FP))
+
+
+#df_grid_df_grid_logReg = df_grid_df_grid_logReg.drop("mean_fit_time", axis = 1)
+#df_grid_df_grid_logReg = df_grid_df_grid_logReg.drop("std_fit_time", axis = 1)
+#df_grid_df_grid_logReg = df_grid_df_grid_logReg.drop("mean_score_time", axis = 1)
+#df_grid_df_grid_logReg = df_grid_df_grid_logReg.drop("std_score_time", axis = 1)
