@@ -2,6 +2,34 @@ import pdb
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import auc, roc_curve
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
+def FrankeFunction(x,y):
+    term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
+    term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
+    term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
+    term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
+    return term1 + term2 + term3 + term4
+
+def surfPlot(x, y, z, xlabel = 'x', ylabel = 'y', zlabel = 'z', savefig = False, figname = ''):
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    # Plot the surface.
+    surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm,
+                         linewidth=0, antialiased=False)
+    # Customize the z axis.
+    #ax.set_zlim(-0.10, 1.40)
+    ax.zaxis.set_major_locator(LinearLocator(10))
+    ax.zaxis.set_major_formatter(FormatStrFormatter('%.01f'))
+    # Add a color bar which maps values to colors.
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    ax.set_xlabel(xlabel, fontsize = 9)
+    ax.set_ylabel(ylabel, fontsize = 9)
+    ax.set_zlabel(zlabel, fontsize = 9)
+    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight') 
+    plt.show()
 
 def sigmoid(x):
 	s = 1/(1+np.exp(-x))
