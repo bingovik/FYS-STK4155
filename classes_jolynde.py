@@ -45,7 +45,7 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
             n_hidden_neurons = (n_hidden_neurons,)
         self.n_hidden_neurons = n_hidden_neurons
         self.n_hidden_layers = len(n_hidden_neurons)
-        
+
         #setting the activation function and its derivative of z
         if activation_function == 'relu':
             self.activation = relu
@@ -81,7 +81,7 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
 
     def feed_forward(self):
         # feed-forward for training
-        
+
         #calculating first hidden layer input and activation
         self.z[0] = self.X_data@self.w[0] + self.bias[0]
         self.a[0] = self.activation(self.z[0])
@@ -194,27 +194,38 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
 
 class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, layer_sizes=[50],
+    def __init__(self, layer_sizes=[50,20],
                 batch_size=100,
                 epochs=10,
                 optimizer="Adam",
                 loss="binary_crossentropy",
-                _lambda = 0.1,
-                activation_function = 'relu'):
+                alpha = 0.1,
+                #activation_function = 'relu',
+                #activation = 'sigmoid'
+                ):
         self.layer_sizes = layer_sizes
         self.batch_size = batch_size
         self.epochs = epochs
         self.optimizer = optimizer
         self.loss = loss
-        self._lambda = _lambda
-        self.activation_function = activation_function
+        self.alpha = alpha
+        #self.activation_function = activation_function
+        #self.activation = activation
+
+    def get_params(self, deep=True):
+        return {k: v for k, v in self.__dict__.items() if not callable(v)}
+
+    def set_params(self, **parameters):
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
 
     def build_network(self, X, y):
         model = Sequential()
-        model.add(BatchNormalization())
+        #model.add(BatchNormalization())
         for layer_size in self.layer_sizes:
-            model.add(Dense(layer_size, activation=self.activation_function,kernel_regularizer=regularizers.l2(self._lambda)))
-        model.add(Dense(2, activation='softmax'))
+            model.add(Dense(layer_size, activation='relu',kernel_regularizer=regularizers.l2(self.alpha)))
+        model.add(Dense(1, activation='sigmoid'))
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
@@ -234,6 +245,26 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
         return self.model.evaluate(Xtest, ytest)
         print(accuracy)
 
+class NeuralTensorFlowGridSearch(BaseEstimator, ClassifierMixin):
+
+    def fit(self, X, y):
+        param_grid = {
+        'layer_sizes': [[32, 16], [64, 16], [64,32,16,8]],
+        'batch_size': [8],
+        'epochs': [3],
+        'optimizer': ['Adam'],
+        'loss': ['binary_crossentropy'],
+        'alpha': [1, 0.1, 0.01, 0.001, 0.0001]
+        }
+        self.model = GridSearchCV(Neural_TensorFlow(), param_grid, cv=5, n_jobs=6)
+        self.model.fit(X, y)
+        print(self.model.best_params_)
+
+    def predict(self, Xtest):
+        return self.model.predict(Xtest)
+
+    def predict_classes(self, Xtest):
+        return self.model.predict_classes(Xtest)
 
 
 ##############################

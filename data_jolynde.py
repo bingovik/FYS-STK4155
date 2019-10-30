@@ -209,8 +209,8 @@ Y_train_onehot = Y_train_onehot.toarray()
 Y_test_onehot = Y_test_onehot.toarray()
 
 nn = classes_jolynde.NeuralNetwork(n_hidden_neurons = 50, activation_function = 'sigmoid', epochs = 40)
-nn.fit(Xtrain,Y_train_onehot, X_test = Xtest, y_test = Y_test_onehot, plot_learning = True)
-
+nn.fit(Xtrain,Y_train_onehot, X_test = Xtest, y_test = Y_test_onehot, plot_learning = False)
+'''
 #GridSearchCV on our own logistic regression
 parameters = {'_lambda':[0, 0.1, 1, 10], 'eta':[0.01,0.1,1], 'max_iter':[100,500,1000]}
 logReg = classes_jolynde.logisticRegression()
@@ -271,24 +271,42 @@ print('Confusion matrix for neural network:')
 conf = confusion_matrix(Y_test_onehot[:,1], nnBest.predict(Xtest)[:,1])
 print(conf)
 '''
+
+nnTensor1 = classes_jolynde.Neural_TensorFlow()
+nnTensor1.fit(Xtrain, ytrain)
+
+pred = nnTensor1.predict_classes(Xtest)
+print(pred.shape)
+acc = accuracy_score(ytest, pred)
+print(confusion_matrix(ytest, pred))
+
+nn2 = classes_jolynde.NeuralTensorFlowGridSearch()
+nn2.fit(Xtrain, ytrain)
+pred2 = nn2.predict_classes
+print(confusion_matrix(ytest, pred2))
+'''
 #GridSearchCV on Tensorflow/Keras neural network
-parameters = {'layer_sizes':([10],[50],[50,20],[30,20,10]), 'activation_function':['sigmoid', 'tanh', 'relu'], '_lambda':[0, 0.01, 0.03, 0.1], 'epochs':[1,2]}
+parameters = {'layer_sizes':([50],[50,20],[32,16,8]), 'activation_function':['sigmoid', 'relu'], '_lambda':[0, 0.01, 0.1], 'epochs':[2]}
 nnTensor = classes_jolynde.Neural_TensorFlow()
-clf = GridSearchCV(nnTensor, parameters, scoring = 'accuracy', cv=5, verbose = 0)
-clf.fit(Xtrain,Y_train_onehot)
+clf = GridSearchCV(nnTensor, parameters, scoring = 'accuracy', cv=2, verbose = 0)
+clf.fit(Xtrain, ytrain)
 df_grid_nn = pd.DataFrame.from_dict(clf.cv_results_)
+
+print(clf.best_params_)
 
 #fit best Tensorflow/Keras nn model and print metrics
 nnBestTensor = classes_jolynde.Neural_TensorFlow(**clf.best_params_)
-nnBestTensor.fit(Xtrain, Y_train_onehot)
+nnBestTensor.fit(Xtrain, ytrain)
+
 print('Classification report for TensorFlow neural network:')
-print(classification_report(Y_test_onehot, nnBestTensor.predict_classes(Xtest)))
-print('Accuracy: %g' % accuracy_score(Y_test_onehot,nnBestTensor.predict_classes(Xtest)))
-area_ratio_nn_Tensor = area_ratio(Y_test_onehot[:,1], nnBestTensor.predict(Xtest)[:,1], plot = True)
+print(classification_report(ytest, nnBestTensor.predict_classes(Xtest)))
+print('Accuracy: %g' % accuracy_score(ytest, nnBestTensor.predict_classes(Xtest)))
+area_ratio_nn_Tensor = area_ratio(ytrain, nnBestTensor.predict(Xtest), plot = True)
 print('Area ratio: %g' % area_ratio_nn_Tensor)
 print('Confusion matrix for TensorFlow neural network:')
-conf = confusion_matrix(Y_test_onehot[:,1], nnBestTensor.predict_classes(Xtest)[:,1])
+conf = confusion_matrix(ytest, nnBestTensor.predict_classes(Xtest))
 print(conf)
+'''
 '''
 #clf = classes_jolynde.logReg_scikit()
 
@@ -360,7 +378,7 @@ FN = conf[1, 0]
 print('Recall // Sensitivity:', (TP / float(FN + TP)))
 print('Precision:', TP / float(TP + FP))
 
-
+'''
 #df_grid_df_grid_logReg = df_grid_df_grid_logReg.drop("mean_fit_time", axis = 1)
 #df_grid_df_grid_logReg = df_grid_df_grid_logReg.drop("std_fit_time", axis = 1)
 #df_grid_df_grid_logReg = df_grid_df_grid_logReg.drop("mean_score_time", axis = 1)
