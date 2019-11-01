@@ -78,21 +78,22 @@ def R2(z_data, z_model):
     return 1 - np.sum((z_data - z_model) ** 2) / np.sum((z_data - np.mean(z_model)) ** 2)
 
 
-import regression
-nn = regression.Neural_TensorFlow()
-
-"""
-nn_reg_skl = regression.Neural_TensorFlow()
-nn_reg_skl.fit(X_train, z_train)
-pred = nn_reg_skl.predict(X_test)
-"""
+from regression import *
+nn_keras = Neural_TensorFlow()
+nn = NeuralNetworkRegressor()
 
 
-regressor1 = KerasRegressor(build_fn=nn.build_network)  #, epochs=20, batch_size=3)
-regressor1.fit(X_train, z_train)
-y_pred1 = regressor1.predict(X_test)
+regressor_keras = KerasRegressor(build_fn=nn_keras.build_network)  #, epochs=20, batch_size=3)
+regressor_keras.fit(X_train, z_train)
+y_pred_keras = regressor_keras.predict(X_test)
 
-### ADD GRIDSEARCH #### 
+print(z_train.shape)
+nn.fit(X_train, z_train, X_test = X_test, y_test = z_test)
+y_pred_nn = nn.predict(Xtest)
+
+print(y_pred_nn)
+
+### ADD GRIDSEARCH ####
 
 mse_krr = mean_squared_error(z_test, y_pred1)
 print('mse_nn:', mse_krr)
