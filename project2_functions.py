@@ -107,7 +107,7 @@ def surfPlot(x, y, z, xlabel = 'x', ylabel = 'y', zlabel = 'z', savefig = False,
     ax.set_xlabel(xlabel, fontsize = 9)
     ax.set_ylabel(ylabel, fontsize = 9)
     ax.set_zlabel(zlabel, fontsize = 9)
-    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight') 
+    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight')
     plt.show()
 
 def sigmoid(x):

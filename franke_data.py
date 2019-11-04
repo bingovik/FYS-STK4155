@@ -52,7 +52,7 @@ def CreateDesignMatrix_X(x, y, n):
             X[:,q+k] = x**(i-k) * y**k
     return X
 
-n_x = 100   # number of points
+n_x = 40   # number of points
 x = np.linspace(0, 1, n_x)
 y = np.linspace(0, 1, n_x)
 x, y = np.meshgrid(x,y)
@@ -63,7 +63,10 @@ x_1 = np.ravel(x)
 y_1 = np.ravel(y)
 n = int(len(x_1))
 z_true = np.ravel(z)
-z_1 = np.ravel(z) + np.random.normal(size=n) * 0.5
+z_1 = (np.ravel(z) + np.random.normal(size=n) * 0.5)
+
+print('z_1:', z_1.shape)
+print('z_true:', z_true.shape)
 
 m = 5  # degree of polynomial
 X = CreateDesignMatrix_X(x_1, y_1, n=m)
@@ -78,27 +81,27 @@ def R2(z_data, z_model):
     return 1 - np.sum((z_data - z_model) ** 2) / np.sum((z_data - np.mean(z_model)) ** 2)
 
 
-import regression
-nn = regression.Neural_TensorFlow()
-
-"""
-nn_reg_skl = regression.Neural_TensorFlow()
-nn_reg_skl.fit(X_train, z_train)
-pred = nn_reg_skl.predict(X_test)
-"""
+from regression import *
+nn_keras = Neural_TensorFlow(len_X = X_train)
+nn = NeuralNetworkRegressor(n_hidden_neurons = (50,), activation_function = 'relu', eta = 0.01, epochs = 50, batch_size=16)
 
 
-regressor1 = KerasRegressor(build_fn=nn.build_network)  #, epochs=20, batch_size=3)
-regressor1.fit(X_train, z_train)
-y_pred1 = regressor1.predict(X_test)
+regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=50, batch_size=10)
+regressor_keras.fit(X_train, z_train)
+y_pred_keras = regressor_keras.predict(X_test)
 
-### ADD GRIDSEARCH #### 
+nn.fit(X_train, z_train, X_test = X_test, y_test = z_test)
+y_pred_nn = nn.predict(X_test)
 
-mse_krr = mean_squared_error(z_test, y_pred1)
-print('mse_nn:', mse_krr)
-print('mse_nn_1:', MSE(z_true_test, y_pred1))
-print('R2_nn:', R2(z_true_test, y_pred1))
+mse_keras = mean_squared_error(z_test, y_pred_keras)
+print('mse_keras:', mse_keras)
+print('mse_keras_true:', MSE(z_true_test, y_pred_keras))
+print('R2_keras_true:', R2(z_true_test, y_pred_keras))
 
+mse_nn = mean_squared_error(z_test, y_pred_nn)
+print('mse_nn:', mse_nn)
+print('mse_nn_true:', MSE(z_true_test, y_pred_nn))
+print('R2_nn_true:', R2(z_true_test, y_pred_nn))
 
 
 

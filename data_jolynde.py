@@ -55,7 +55,6 @@ df = df.drop(df[(df.EDUCATION == 0) |
 
 df = df.drop(df[(df.MARRIAGE == 0)].index)
 
-
 # Plot the variables
 fig1, ax = plt.subplots(figsize = (14, 6), ncols = 3)
 sns.countplot(x = df['EDUCATION'], hue = df['defaultPayment'], data = df, ax = ax[0])
