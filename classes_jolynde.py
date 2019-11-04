@@ -186,7 +186,7 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
             plot_several(np.repeat(np.arange(1,self.epochs+1)[:,None], 2, axis=1),
                 np.hstack((acc_train[:,None],acc_test[:,None])),
                 ['r-', 'b-'], ['train', 'test'],
-                'Epochs', 'accuracy', 'Accuracy during training',
+                'Epochs', 'accuracy', 'NN accuracy during training',
                 savefig = savefig, figname = filename)
 
         return acc_train, acc_test
@@ -404,27 +404,6 @@ class Neural_TensorFlow:
         return self.model.evaluate(Xtest, ytest)
         print(accuracy)
 
-class NeuralTensorFlowGridSearch(BaseEstimator, ClassifierMixin):
-
-    def fit(self, X, y):
-        param_grid = {
-        'layer_sizes': [[32, 16], [64, 16], [64,32,16,8]],
-        'batch_size': [8],
-        'epochs': [3],
-        'optimizer': ['Adam'],
-        'loss': ['binary_crossentropy'],
-        'alpha': [1, 0.1, 0.01, 0.001, 0.0001]
-        }
-        self.model = GridSearchCV(Neural_TensorFlow(), param_grid, cv=5, n_jobs=6)
-        self.model.fit(X, y)
-        print(self.model.best_params_)
-
-    def predict(self, Xtest):
-        return self.model.predict(Xtest)
-
-    def predict_classes(self, Xtest):
-        return self.model.predict_classes(Xtest)
-
 ######## LOGISTIC REGRESSION
 
 class logReg_scikit:
@@ -469,7 +448,7 @@ class logisticRegression(BaseEstimator, ClassifierMixin):
     def train_track_test(self, X, y, X_test, y_test, plot = False, savefig = False, filename = ''):
         _lambda = self._lambda; eta = self.eta
         X = np.hstack((np.ones(X.shape[0])[:,None], X))
-        X_test = np.hstack((np.ones(X_test.shape[0])[:,None], X))
+        X_test = np.hstack((np.ones(X_test.shape[0])[:,None], X_test))
         self.beta = np.zeros(X.shape[1])[:,None]
         n = X.shape[0]
         cross_entropy_train = np.zeros(self.max_iter)
@@ -486,7 +465,7 @@ class logisticRegression(BaseEstimator, ClassifierMixin):
             plot_several(np.repeat(np.arange(self.max_iter)[:,None], 2, axis=1),
                 np.hstack((cross_entropy_train[:,None],cross_entropy_test[:,None])),
                 ['r-', 'b-'], ['train', 'test'],
-                'iterations', 'cross entropy', 'Cross entropy during training',
+                'iterations', 'cross entropy', 'Logistic Regression Learning',
                 savefig = savefig, figname = filename)
 
     def get_proba(self, X):
