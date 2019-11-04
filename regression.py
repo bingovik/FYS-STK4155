@@ -216,7 +216,7 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
         #model.add(BatchNormalization())
         for layer_size in self.layer_sizes:
             model.add(Dense(layer_size, input_dim = self.len_X, activation=self.activation_function, kernel_regularizer=regularizers.l2(self._lambda)))
-        model.add(Dense(1, activation = None))
+        model.add(Dense(1, activation = 'linear'))
         model.compile(loss=self.loss,
                       optimizer=self.optimizer)
         return model

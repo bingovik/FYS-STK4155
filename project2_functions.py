@@ -28,12 +28,12 @@ def surfPlot(x, y, z, xlabel = 'x', ylabel = 'y', zlabel = 'z', savefig = False,
     ax.set_xlabel(xlabel, fontsize = 9)
     ax.set_ylabel(ylabel, fontsize = 9)
     ax.set_zlabel(zlabel, fontsize = 9)
-    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight') 
+    if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight')
     plt.show()
 
 def sigmoid(x):
 	s = 1/(1+np.exp(-x))
-	#s = (x>=0)/(1+np.exp(-x)) + (x<0)*exp(x)/(1+np.exp(x)) 
+	#s = (x>=0)/(1+np.exp(-x)) + (x<0)*exp(x)/(1+np.exp(x))
 	return s
 
 def relu(x):
@@ -118,6 +118,58 @@ def cv(model, k, metric, X, y, X_test, y_test, max_iter):
 	bias_test_plus_noise = np.mean((y_test[:,None] - np.mean(y_predict_cv_test, axis=1, keepdims=True))**2)
 
 	return metric_val, metric_test, MSE_test, variance_test, bias_test_plus_noise
+
+def MSE(z_data, z_model):
+    n = np.size(z_model)
+    return np.sum((z_data-z_model)**2)/n
+
+def R2(z_data, z_model):
+    return 1 - np.sum((z_data - z_model) ** 2) / np.sum((z_data - np.mean(z_model)) ** 2)
+
+def cross_validation(x, y, k):
+    n = len(x)
+
+    indexes = np.arange(y.shape[0])
+    np.random.shuffle(indexes)
+    x = x[indexes]
+    y = y[indexes]
+
+    r2_train = []
+    r2_test = []
+    mse_train = []
+    mse_test = []
+
+    #bias = []
+    #variance = []
+    for i in range(k):
+        x_train = np.concatenate((x[:int(i*n/k)], x[int((i + 1)*n/k): ]), axis = 0)
+        x_test = x[int(i*n/k):int((i + 1)*n/k)]
+        y_train = np.concatenate((y[:int(i*n/k)], y[int((i + 1)*n/k): ]), axis = 0)
+        y_test = y[int(i*n/k):int((i + 1)*n/k)]
+
+        beta = np.linalg.pinv(x_train.T.dot(x_train)).dot(x_train.T).dot(y_train)
+        ytilde = x_train @ beta
+        ypredict = x_test @ beta
+
+        mse_train.append(MSE(y_train, ytilde))
+        mse_test.append(MSE(y_test, ypredict))
+
+        r2_train.append(R2(y_train, ytilde))
+        r2_test.append(R2(y_test, ypredict))
+
+        #bias.append(np.mean((y_test - np.mean(ypredict))**2))
+        #variance.append(np.mean(np.var(ypredict)))
+
+    r2_train = np.array(r2_train)
+    r2_test = np.array(r2_test)
+    mse_train = np.array(mse_train)
+    mse_test = np.array(mse_test)
+
+    #bias = np.array(bias)
+    #variance = np.array(variance)
+
+    return mse_train, mse_test, r2_train, r2_test #bias, variance
+
 
 def plot_several(x_data, y_data, colors, labels, xlabel, ylabel, title, savefig = False, figname = ''):
     fig, ax = plt.subplots()
