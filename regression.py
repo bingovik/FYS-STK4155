@@ -157,7 +157,7 @@ class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
     def fit(self, X_data, Y_data, X_test = [], y_test = [], plot_learning = False, savefig = False, filename = ''):
         self.X_data_full = X_data
         self.Y_data_full = Y_data
-        self.n_categories = Y_data.shape[1]
+        self.n_categories = Y_data.shape[1]  #not sure about whether this one should be 1 or 0, do we want the number of rows? otherwise it is just one.
         self.n_inputs = X_data.shape[0]
         self.n_features = X_data.shape[1]
         self.iterations = self.n_inputs // self.batch_size
@@ -200,7 +200,8 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
                 optimizer="Adam",
                 loss="mean_squared_error",
                 _lambda = 0,
-                activation_function = 'relu'):
+                activation_function = 'relu',
+                len_X = 'Xtrain'):
         self.layer_sizes = layer_sizes
         self.batch_size = batch_size
         self.epochs = epochs
@@ -208,12 +209,13 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
         self.loss = loss
         self._lambda = _lambda
         self.activation_function = activation_function
+        self.len_X = len(len_X[0])
 
     def build_network(self):
         model = Sequential()
-        model.add(BatchNormalization())
+        #model.add(BatchNormalization())
         for layer_size in self.layer_sizes:
-            model.add(Dense(layer_size, input_dim = 21, activation=self.activation_function, kernel_regularizer=regularizers.l2(self._lambda)))
+            model.add(Dense(layer_size, input_dim = self.len_X, activation=self.activation_function, kernel_regularizer=regularizers.l2(self._lambda)))
         model.add(Dense(1, activation = None))
         model.compile(loss=self.loss,
                       optimizer=self.optimizer)

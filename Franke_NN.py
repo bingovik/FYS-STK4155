@@ -56,9 +56,12 @@ list_of_features = []
 #making useful variables
 poly_degrees = np.arange(poly_degree_max)+1
 lambda_tests_str = ['%.1E' % Decimal(str(lam)) for lam in lambda_tests]
-z = np.ravel(zz)[:,None]
-z_true = np.ravel(zz_)[:,None]
+z = np.ravel(zz) #[:,None]
+z_true = np.ravel(zz_) #[:,None]
 X_orig = np.vstack((np.ravel(xx), np.ravel(yy))).T
+
+print(z.shape)
+print(z_true.shape)
 
 # Generate design matrix of polygons up to with chosen polynomial degree
 poly = PolynomialFeatures(poly_degree) #inlude bias = false
@@ -74,17 +77,13 @@ X_train[:,1:] = sc.fit_transform(X_train[:,1:])
 X_test[:,1:] = sc.transform(X_test[:,1:])
 X[:,1:] = sc.transform(X[:,1:])
 
-print(z_train.shape)
+print(X_train.shape)
 
 scikitlearn_OLS = LinearRegression()
 scikitlearn_OLS.fit(X_train, z_train)
 print(mean_squared_error(z_test, scikitlearn_OLS.predict(X_test)))
 
-### NEURAL NET REGRESSION
-from regression import *
-nn_keras = Neural_TensorFlow(layer_sizes = (50,), activation_function = 'relu')
-nn = NeuralNetworkRegressor(n_hidden_neurons = (50,), activation_function = 'relu', eta = 0.01, epochs = 50, batch_size=16)
-
+#Functions MSE and R2
 def MSE(z_data, z_model):
     n = np.size(z_model)
     return np.sum((z_data-z_model)**2)/n
@@ -92,24 +91,55 @@ def MSE(z_data, z_model):
 def R2(z_data, z_model):
     return 1 - np.sum((z_data - z_model) ** 2) / np.sum((z_data - np.mean(z_model)) ** 2)
 
-regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=50, batch_size=16)
+
+#------------------------------------#
+
+### NEURAL NET REGRESSION
+from regression import *
+nn_keras = Neural_TensorFlow(layer_sizes = (100,20), activation_function = 'relu', len_X = X_train)
+nn = NeuralNetworkRegressor(n_hidden_neurons = (100,20), activation_function = 'relu', eta = 0.01, epochs = 50, batch_size=16)
+
+regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=50, batch_size=10)
 regressor_keras.fit(X_train, z_train)
 y_pred_keras = regressor_keras.predict(X_test)
-
-nn.fit(X_train, z_train, X_test = X_test, y_test = z_test)
-y_pred_nn = nn.predict(X_test)
 
 mse_keras = mean_squared_error(z_test, y_pred_keras)
 print('mse_keras:', mse_keras)
 print('mse_keras_true:', MSE(z_true_test, y_pred_keras))
 print('R2_keras_true:', R2(z_true_test, y_pred_keras))
 
-mse_nn = mean_squared_error(z_test, y_pred_nn)
-print('mse_nn:', mse_nn)
-print('mse_nn_true:', MSE(z_true_test, y_pred_nn))
-print('R2_nn_true:', R2(z_true_test, y_pred_nn))
+cv_keras = cross_val_score(regressor_keras, X, z, cv = 5, scoring = 'neg_mean_squared_error')
+print('cv_scores_keras:', cv_keras)
+print('cv_mean_keras:', -np.mean(cv_keras))
 
-epochs = 500
+nn.fit(X_train, z_train[:,None], X_test = X_test, y_test = z_test[:,None])
+y_pred_nn = nn.predict(X_test)
+
+mse_nn = mean_squared_error(z_test[:,None], y_pred_nn)
+print('mse_nn:', mse_nn)
+print('mse_nn_true:', MSE(z_true_test[:,None], y_pred_nn))
+print('R2_nn_true:', R2(z_true_test[:,None], y_pred_nn))
+
+cv_nn = cross_val_score(nn, X, z[:,None], cv = 5, scoring = 'neg_mean_squared_error')
+print('cv_scores_nn:', cv_nn)
+print('cv_mean_nn:', -np.mean(cv_nn))
+
+##### OLS REGRESSION
+beta = np.linalg.inv(X_train.T.dot(X_train)).dot(X_train.T).dot(z_train)
+ztilde = X_train @ beta
+
+zpredict = X_test @ beta
+
+print("Training MSE: %0.4f" % MSE(z_train, ztilde))
+print("Test MSE: %0.4f" % MSE(z_test, zpredict))
+print("True MSE: %0.4f" % MSE(z_true_test, zpredict))
+
+print("Training R2: %0.4f" % R2(z_train, ztilde))
+print("Test R2: %0.4f" % R2(z_test, zpredict))
+print("True R2: %0.4f" % R2(z_true_test, zpredict))
+
+
+epochs = 50
 batch_size = 10
 eta_vals = [0.0001, 0.001, 0.005, 0.01, 0.05, 0.1] #np.logspace(-2, 1, 7)
 lmbd_vals = [0, 1e-5, 1e-3, 0.01, 0.05, 0.1, 1.0] #np.logspace(-2, 1, 7)
@@ -126,18 +156,18 @@ for i, eta in enumerate(eta_vals):
     for j, lmbd in enumerate(lmbd_vals):
         DNN_ = NeuralNetworkRegressor(n_hidden_neurons = (50,), epochs = epochs, batch_size = batch_size,
                                          eta=eta, lmbd=lmbd)
-        DNN_.fit(X_train, z_train, X_test = X_test, y_test = z_test)
-        scores = MSE(z_true_test, DNN_.predict(X_test))
+        DNN_.fit(X_train, z_train[:,None], X_test = X_test, y_test = z_test[:,None])
+        scores = MSE(z_true_test[:,None], DNN_.predict(X_test))
 
         DNN_nn[i][j] = DNN_
 
-        print("Learning rate = ", eta)
-        print("Lambda = ", lmbd)
-        print("Test MSE: %.3f" % scores)
-        print()
+        #print("Learning rate = ", eta)
+        #print("Lambda = ", lmbd)
+        #print("Test MSE: %.3f" % scores)
+        #print()
 
-        train_MSE[i][j] = MSE(z_train, DNN_.predict(X_train))
-        test_true_MSE[i][j] = MSE(z_true_test, DNN_.predict(X_test))
+        train_MSE[i][j] = MSE(z_train[:,None], DNN_.predict(X_train))
+        test_true_MSE[i][j] = MSE(z_true_test[:,None], DNN_.predict(X_test))
 
 fig, ax = plt.subplots(figsize = (10, 10))
 sns.heatmap(train_MSE, annot=True, ax=ax, cmap="viridis")
@@ -152,7 +182,7 @@ fig, ax = plt.subplots(figsize = (10, 10))
 sns.heatmap(test_true_MSE, annot=True, ax=ax, cmap="viridis")
 ax.set_xticklabels(lmbd_vals)
 ax.set_yticklabels(eta_vals)
-ax.set_title("Test MSE")
+ax.set_title("MSE on the true data")
 ax.set_ylabel("$\eta$")
 ax.set_xlabel("$\lambda$")
 plt.show()
@@ -160,19 +190,7 @@ plt.show()
 ### ADD CROSS VALIDATION ####
 
 
-##### REGRESSION
-beta = np.linalg.inv(X_train.T.dot(X_train)).dot(X_train.T).dot(z_train)
-ztilde = X_train @ beta
 
-zpredict = X_test @ beta
-
-print("Training MSE: %0.4f" % MSE(z_train, ztilde))
-print("Test MSE: %0.4f" % MSE(z_test, zpredict))
-print("True MSE: %0.4f" % MSE(z_true_test, zpredict))
-
-print("Training R2: %0.4f" % R2(z_train, ztilde))
-print("Test R2: %0.4f" % R2(z_test, zpredict))
-print("True R2: %0.4f" % R2(z_true_test, zpredict))
 
 
 """
