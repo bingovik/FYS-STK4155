@@ -30,35 +30,19 @@ from decimal import Decimal
 import seaborn as sns
 sns.set()
 
-# setting models and hyper parameters
+# Creating the Franke data
 poly_degree = 7
-#poly_degree_max = 10
-#lambda_test_number = 15
-#lambda_tests = np.logspace(-7, 1, num=lambda_test_number)
 
-#savefigs = True
-
-# set noise and number of data points for Franke function evaluation
 seed = 0
-x = np.sort(np.random.rand(40))
-#seed = 0
-y = np.sort(np.random.rand(40))
+x = np.sort(np.random.rand(10))
+y = np.sort(np.random.rand(10))
 xx, yy = np.meshgrid(x,y)
 zz_ = FrankeFunction(xx,yy)
 sigma = 0.1 #random noise std dev
-#seed = 0
 noise = np.resize(np.random.normal(0, sigma, xx.size),(len(x),len(y)))
 zz = zz_ + noise
-#fignamePostFix = '_Franke_40_01'
-
-#plot data
-#surfPlot(xx, yy, zz, savefig = savefigs, figname = 'surfDataRaw' + fignamePostFix)
 
 list_of_features = []
-
-#making useful variables
-#poly_degrees = np.arange(poly_degree_max)+1
-#lambda_tests_str = ['%.1E' % Decimal(str(lam)) for lam in lambda_tests]
 z = np.ravel(zz) #[:,None]
 z_true = np.ravel(zz_) #[:,None]
 X_orig = np.vstack((np.ravel(xx), np.ravel(yy))).T
@@ -76,14 +60,6 @@ sc = StandardScaler()
 X_train[:,1:] = sc.fit_transform(X_train[:,1:])
 X_test[:,1:] = sc.transform(X_test[:,1:])
 X[:,1:] = sc.transform(X[:,1:])
-
-#Functions MSE and R2
-#def MSE(z_data, z_model):
-#    n = np.size(z_model)
-#    return np.sum((z_data-z_model)**2)/n
-
-#def R2(z_data, z_model):
-#    return 1 - np.sum((z_data - z_model) ** 2) / np.sum((z_data - np.mean(z_model)) ** 2)
 
 
 #------------------------------------#
@@ -127,7 +103,7 @@ print("cv_R2_OLS test: %0.5f (+/- %0.5f)" % (r2_test.mean(), r2_test.std()*2))
 
 # Which value for eta & lambda
 eta_vals = [0.0001, 0.001, 0.005, 0.01, 0.05, 0.1] #np.logspace(-2, 1, 7)
-lmbd_vals = [0, 1e-5, 1e-3, 0.01, 0.1, 1.0] #np.logspace(-2, 1, 7)
+lmbd_vals = [0, 1e-5, 1e-4, 1e-3, 0.01, 0.1] #np.logspace(-2, 1, 7)
 
 DNN_nn = np.zeros((len(eta_vals), len(lmbd_vals)), dtype=object)
 scores = np.zeros((len(eta_vals), len(lmbd_vals)))
