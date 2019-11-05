@@ -63,7 +63,7 @@ x_1 = np.ravel(x)
 y_1 = np.ravel(y)
 n = int(len(x_1))
 z_true = np.ravel(z)
-z_1 = (np.ravel(z) + np.random.normal(size=n) * 0.5)
+z_1 = (np.ravel(z) + np.random.normal(size=n) * 0.1)
 
 print('z_1:', z_1.shape)
 print('z_true:', z_true.shape)
@@ -90,7 +90,7 @@ regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=50, bat
 regressor_keras.fit(X_train, z_train)
 y_pred_keras = regressor_keras.predict(X_test)
 
-nn.fit(X_train, z_train, X_test = X_test, y_test = z_test)
+nn.fit(X_train, z_train[:,None], X_test = X_test, y_test = z_test[:,None])
 y_pred_nn = nn.predict(X_test)
 
 mse_keras = mean_squared_error(z_test, y_pred_keras)
@@ -98,10 +98,10 @@ print('mse_keras:', mse_keras)
 print('mse_keras_true:', MSE(z_true_test, y_pred_keras))
 print('R2_keras_true:', R2(z_true_test, y_pred_keras))
 
-mse_nn = mean_squared_error(z_test, y_pred_nn)
+mse_nn = mean_squared_error(z_test[:,None], y_pred_nn)
 print('mse_nn:', mse_nn)
-print('mse_nn_true:', MSE(z_true_test, y_pred_nn))
-print('R2_nn_true:', R2(z_true_test, y_pred_nn))
+print('mse_nn_true:', MSE(z_true_test[:,None], y_pred_nn))
+print('R2_nn_true:', R2(z_true_test[:,None], y_pred_nn))
 
 
 

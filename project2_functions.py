@@ -242,8 +242,6 @@ def cross_validation(x, y, k):
     mse_train = []
     mse_test = []
 
-    bias = []
-    variance = []
     for i in range(k):
         x_train = np.concatenate((x[:int(i*n/k)], x[int((i + 1)*n/k): ]), axis = 0)
         x_test = x[int(i*n/k):int((i + 1)*n/k)]
@@ -260,15 +258,9 @@ def cross_validation(x, y, k):
         r2_train.append(R2(y_train, ytilde))
         r2_test.append(R2(y_test, ypredict))
 
-        bias.append(np.mean((y_test - np.mean(ypredict))**2))
-        variance.append(np.mean(np.var(ypredict)))
-
     r2_train = np.array(r2_train)
     r2_test = np.array(r2_test)
     mse_train = np.array(mse_train)
     mse_test = np.array(mse_test)
 
-    bias = np.array(bias)
-    variance = np.array(variance)
-
-    return r2_test, mse_train, mse_test, bias, variance, r2_train
+    return mse_train, mse_test, r2_train, r2_test

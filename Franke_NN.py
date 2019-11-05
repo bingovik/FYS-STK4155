@@ -5,7 +5,7 @@ import random
 import seaborn as sns
 import pdb
 
-from sklearn.model_selection import train_test_split, cross_validate
+from sklearn.model_selection import train_test_split, cross_validate, ShuffleSplit
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score, cross_validate
 from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures
@@ -34,8 +34,8 @@ sns.set()
 poly_degree = 7
 
 seed = 0
-x = np.sort(np.random.rand(40))
-y = np.sort(np.random.rand(40))
+x = np.sort(np.random.rand(100))
+y = np.sort(np.random.rand(100))
 xx, yy = np.meshgrid(x,y)
 zz_ = FrankeFunction(xx,yy)
 sigma = 0.1 #random noise std dev
@@ -67,14 +67,15 @@ X[:,1:] = sc.transform(X[:,1:])
 ### NEURAL NET REGRESSION
 from regression import *
 
-layer_size = (50,)
-epochs = 50
+layer_size = (100,20)
+epochs = 100
 batch_size = 10
-eta = 0.001
+eta = 0.01
 lambda_ = 0
+activation_function = 'relu'
 
-nn_keras = Neural_TensorFlow(layer_sizes = layer_size, activation_function = 'sigmoid', len_X = X_train)
-nn = NeuralNetworkRegressor(n_hidden_neurons = layer_size, activation_function = 'sigmoid', eta = eta, epochs = epochs, batch_size=batch_size)
+nn_keras = Neural_TensorFlow(layer_sizes = layer_size, activation_function = activation_function, len_X = X_train)
+nn = NeuralNetworkRegressor(n_hidden_neurons = layer_size, activation_function = activation_function, eta = eta, epochs = epochs, batch_size=batch_size)
 
 """
 nn.fit(X_train, z_train[:,None], X_test = X_test, y_test = z_test[:,None])
@@ -86,12 +87,20 @@ print('mse_nn_true:', MSE(z_true_test[:,None], y_pred_nn))
 print('R2_nn_true:', R2(z_true_test[:,None], y_pred_nn))
 """
 
-cv_nn2 = cross_validate(nn, X, z[:,None], cv = 5, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False)
+cv = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
+
+cv_nn2 = cross_validate(nn, X, z[:,None], cv = cv, n_jobs = -1, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False)
 print('cv_scores_nn_test:', cv_nn2['test_neg_mean_squared_error'])
 #print('MSE NN train: %0.5f (+/- %0.5f)' % (-cv_nn['train_neg_mean_squared_error'].mean(), cv_nn['train_neg_mean_squared_error'].std()*2))
 print('MSE NN test: %0.5f (+/- %0.5f)' % (-cv_nn2['test_neg_mean_squared_error'].mean(), cv_nn2['test_neg_mean_squared_error'].std()*2))
 #print('R2 NN train: %0.5f (+/- %0.5f)' % (-cv_nn['train_r2'].mean(), cv_nn['train_r2'].std()*2))
 print('R2 NN test: %0.5f (+/- %0.5f)' % (cv_nn2['test_r2'].mean(), cv_nn2['test_r2'].std()*2))
+
+regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=epochs, batch_size=batch_size, verbose = 0)
+cv_keras = cross_validate(regressor_keras, X, z, cv = cv, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False, verbose = 0, n_jobs = -1)
+print('cv_scores_keras:', cv_keras['test_neg_mean_squared_error'])
+print('MSE keras test: %0.5f (+/- %0.5f)' % (-np.mean(cv_keras['test_neg_mean_squared_error']), np.std(cv_keras['test_neg_mean_squared_error'])*2))
+print('R2 keras test: %0.5f (+/- %0.5f)' % (np.mean(cv_keras['test_r2']), np.std(cv_keras['test_r2'])*2))
 
 ##### OLS REGRESSION
 k = 5
@@ -100,9 +109,10 @@ print("cv_MSE_OLS train: %0.5f (+/- %0.5f)" % (mse_train.mean(), mse_train.std()
 print("cv_MSE_OLS test: %0.5f (+/- %0.5f)" % (mse_test.mean(), mse_test.std()*2))
 print("cv_R2_OLS train: %0.5f (+/- %0.5f)" % (r2_train.mean(), r2_train.std()*2))
 print("cv_R2_OLS test: %0.5f (+/- %0.5f)" % (r2_test.mean(), r2_test.std()*2))
-"""
+
+
 # Which value for eta & lambda
-eta_vals = [0.0001, 0.001, 0.005, 0.01, 0.05, 0.1] #np.logspace(-2, 1, 7)
+eta_vals = [0.0001, 0.001, 0.005, 0.01, 0.05] #np.logspace(-2, 1, 7)
 lmbd_vals = [0, 1e-5, 1e-4, 1e-3, 0.01, 0.1] #np.logspace(-2, 1, 7)
 
 DNN_nn = np.zeros((len(eta_vals), len(lmbd_vals)), dtype=object)
@@ -112,9 +122,9 @@ test_MSE = np.zeros((len(eta_vals), len(lmbd_vals)))
 test_true_MSE = np.zeros((len(eta_vals), len(lmbd_vals)))
 for i, eta in enumerate(eta_vals):
     for j, lmbd in enumerate(lmbd_vals):
-        DNN_ = NeuralNetworkRegressor(n_hidden_neurons = layer_size, epochs = epochs, batch_size = batch_size,
+        DNN_ = NeuralNetworkRegressor(activation_function = activation_function, n_hidden_neurons = layer_size, epochs = epochs, batch_size = batch_size,
                                          eta=eta, lmbd=lmbd)
-        cv_DNN_ = cross_validate(DNN_, X, z[:,None], cv = 5, scoring = 'neg_mean_squared_error', return_train_score = False)
+        cv_DNN_ = cross_validate(DNN_, X, z[:,None], cv = cv, scoring = 'neg_mean_squared_error', return_train_score = False, n_jobs = -1)
         scores = -np.mean(cv_DNN_['test_score'])
 
         test_MSE[i][j] = -np.mean(cv_DNN_['test_score'])
@@ -130,15 +140,6 @@ for i, eta in enumerate(eta_vals):
 
 
 fig, ax = plt.subplots(figsize = (10, 10))
-sns.heatmap(train_MSE, annot=True, ax=ax, cmap="viridis")
-ax.set_xticklabels(lmbd_vals)
-ax.set_yticklabels(eta_vals)
-ax.set_title("Training MSE")
-ax.set_ylabel("$\eta$")
-ax.set_xlabel("$\lambda$")
-plt.show()
-
-fig, ax = plt.subplots(figsize = (10, 10))
 sns.heatmap(test_MSE, annot=True, ax=ax, cmap="viridis")
 ax.set_xticklabels(lmbd_vals)
 ax.set_yticklabels(eta_vals)
@@ -147,7 +148,7 @@ ax.set_ylabel("$\eta$")
 ax.set_xlabel("$\lambda$")
 fig.savefig('./Images/NN_regression1.png')
 plt.show()
-"""
+
 
 eta_n = 0.01
 lmbd_n = 0
@@ -155,12 +156,12 @@ lmbd_n = 0
 # ADD GRIDSEARCH
 parameters = {'n_hidden_neurons':((10,),(100,),(100,20),(128,64,32)), 'activation_function':['sigmoid', 'relu'], 'epochs':[50,100]}
 nn = NeuralNetworkRegressor(eta = eta_n, lmbd = lmbd_n)
-clf = GridSearchCV(nn, parameters, scoring = 'neg_mean_squared_error', cv=5, verbose = 0)
+clf = GridSearchCV(nn, parameters, scoring = 'neg_mean_squared_error', cv=cv, verbose = 0)
 clf.fit(X, z[:,None])
 
 print(clf.best_params_)
 nnBest = NeuralNetworkRegressor(**clf.best_params_, eta = eta_n)
-cv_nn_best = cross_validate(nnBest, X, z[:,None], cv = 5, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False)
+cv_nn_best = cross_validate(nnBest, X, z[:,None], cv = cv, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False)
 print('cv_scores_nn_best_test:', cv_nn_best['test_neg_mean_squared_error'])
 print('MSE NN_best test: %0.5f (+/- %0.5f)' % (-cv_nn_best['test_neg_mean_squared_error'].mean(), cv_nn_best['test_neg_mean_squared_error'].std()*2))
 print('R2 NN_best test: %0.5f (+/- %0.5f)' % (cv_nn_best['test_r2'].mean(), cv_nn_best['test_r2'].std()*2))
@@ -176,33 +177,38 @@ regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=epochs,
 #print('mse_keras_true:', MSE(z_true_test, y_pred_keras))
 #print('R2_keras_true:', R2(z_true_test, y_pred_keras))
 
-cv_keras = cross_validate(regressor_keras, X, z, cv = 5, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = True)
+cv_keras = cross_validate(regressor_keras, X, z, cv = cv, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False, verbose = 0)
 print('cv_scores_keras:', cv_keras['test_neg_mean_squared_error'])
 print('MSE keras test: %0.5f (+/- %0.5f)' % (-np.mean(cv_keras['test_neg_mean_squared_error']), np.std(cv_keras['test_neg_mean_squared_error'])*2))
 print('R2 keras test: %0.5f (+/- %0.5f)' % (-np.mean(cv_keras['test_r2']), np.std(cv_keras['test_r2'])*2))
 
 
 #GridSearchCV on Tensorflow/Keras neural network
-parameters = {'layer_sizes':([10],[50],[50,20]), 'activation_function':['sigmoid', 'relu'], 'alpha':[0, 0.01, 0.03, 0.1], 'epochs':[10,30,60]}
-clf = GridSearchCV(regressor_keras, parameters, scoring = 'accuracy', cv=5, verbose = 8, n_jobs=-1)
+parameters = {'layer_sizes':([10],[50],[50,20]), 'activation_function':['sigmoid', 'relu'], 'epochs':[10,30,60]}
+clf = GridSearchCV(regressor_keras, parameters, scoring = 'accuracy', cv=cv, verbose = 8, n_jobs=-1)
 clf.fit(X_train, z_train)
 df_grid_nn_Keras = pd.DataFrame.from_dict(clf.cv_results_)
 
-#order data into matrix
 df_grid_nn_Keras, row_names_nn_Keras, col_names_nn_Keras = order_gridSearchCV_data(df_grid_nn_Keras, column_param = 'alpha')
-
-#plot heatmap of results
 heatmap(df_grid_nn_Keras, 'Neural network (Keras/TensorFlow) validation accuracy (CV)', '\u03BB', 'parameters', col_names_nn_Keras, row_names_nn_Keras, True, savefig = False)
 
-#fit best Tensorflow/Keras nn model and print metrics
 print(clf.best_params_)
 nnKerasBest = KerasRegressor(build_fn=build_network)
 nnKerasBest.set_params(**clf.best_params_)
-
-cv_nn_keras_best = cross_validate(nnKerasBest, X, z[:,None], cv = 5, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False)
+cv_nn_keras_best = cross_validate(nnKerasBest, X, z[:,None], cv = cv, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False, verbose = 0)
 print('cv_scores_nn_keras_best_test:', cv_nn_keras_best['test_neg_mean_squared_error'])
 print('MSE NN_keras_best test: %0.5f (+/- %0.5f)' % (-cv_nn_keras_best['test_neg_mean_squared_error'].mean(), cv_nn_keras_best['test_neg_mean_squared_error'].std()*2))
 print('R2 NN_keras_best test: %0.5f (+/- %0.5f)' % (cv_nn_keras_best['test_r2'].mean(), cv_nn_keras_best['test_r2'].std()*2))
+
+
+
+## TRUE data
+regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=25, batch_size=batch_size, verbose = 0)
+regressor_keras.fit(X_train, z_train)
+keras_pred = regressor_keras.predict(X_test)
+print('MSE_keras:', MSE(z_test, keras_pred))
+print('R2_keras_test:', R2(z_test, keras_pred))
+print('R2_keras_true:', R2(z_true_test, keras_pred))
 
 
 
