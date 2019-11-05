@@ -199,7 +199,7 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
                 epochs=50,
                 optimizer="Adam",
                 loss="mean_squared_error",
-                _lambda = 0,
+                alpha = 0,
                 activation_function = 'relu',
                 len_X = 'Xtrain'):
         self.layer_sizes = layer_sizes
@@ -207,15 +207,14 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
         self.epochs = epochs
         self.optimizer = optimizer
         self.loss = loss
-        self._lambda = _lambda
+        self.alpha = alpha
         self.activation_function = activation_function
         self.len_X = len(len_X[0])
 
     def build_network(self):
         model = Sequential()
-        #model.add(BatchNormalization())
         for layer_size in self.layer_sizes:
-            model.add(Dense(layer_size, input_dim = self.len_X, activation=self.activation_function, kernel_regularizer=regularizers.l2(self._lambda)))
+            model.add(Dense(layer_size, input_dim = self.len_X, activation=self.activation_function, kernel_regularizer=regularizers.l2(self.alpha)))
         model.add(Dense(1, activation = None))
         model.compile(loss=self.loss,
                       optimizer=self.optimizer)
