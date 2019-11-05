@@ -34,8 +34,8 @@ sns.set()
 poly_degree = 7
 
 seed = 0
-x = np.sort(np.random.rand(10))
-y = np.sort(np.random.rand(10))
+x = np.sort(np.random.rand(40))
+y = np.sort(np.random.rand(40))
 xx, yy = np.meshgrid(x,y)
 zz_ = FrankeFunction(xx,yy)
 sigma = 0.1 #random noise std dev
@@ -67,10 +67,10 @@ X[:,1:] = sc.transform(X[:,1:])
 ### NEURAL NET REGRESSION
 from regression import *
 
-layer_size = (100,20)
+layer_size = (50,)
 epochs = 50
 batch_size = 10
-eta = 0.01
+eta = 0.001
 lambda_ = 0
 
 nn_keras = Neural_TensorFlow(layer_sizes = layer_size, activation_function = 'sigmoid', len_X = X_train)
@@ -100,7 +100,7 @@ print("cv_MSE_OLS train: %0.5f (+/- %0.5f)" % (mse_train.mean(), mse_train.std()
 print("cv_MSE_OLS test: %0.5f (+/- %0.5f)" % (mse_test.mean(), mse_test.std()*2))
 print("cv_R2_OLS train: %0.5f (+/- %0.5f)" % (r2_train.mean(), r2_train.std()*2))
 print("cv_R2_OLS test: %0.5f (+/- %0.5f)" % (r2_test.mean(), r2_test.std()*2))
-
+"""
 # Which value for eta & lambda
 eta_vals = [0.0001, 0.001, 0.005, 0.01, 0.05, 0.1] #np.logspace(-2, 1, 7)
 lmbd_vals = [0, 1e-5, 1e-4, 1e-3, 0.01, 0.1] #np.logspace(-2, 1, 7)
@@ -128,7 +128,7 @@ for i, eta in enumerate(eta_vals):
         #train_MSE[i][j] = MSE(z_train[:,None], DNN_.predict(X_train))
         #test_true_MSE[i][j] = MSE(z_true_test[:,None], DNN_.predict(X_test))
 
-"""
+
 fig, ax = plt.subplots(figsize = (10, 10))
 sns.heatmap(train_MSE, annot=True, ax=ax, cmap="viridis")
 ax.set_xticklabels(lmbd_vals)
@@ -137,7 +137,7 @@ ax.set_title("Training MSE")
 ax.set_ylabel("$\eta$")
 ax.set_xlabel("$\lambda$")
 plt.show()
-"""
+
 fig, ax = plt.subplots(figsize = (10, 10))
 sns.heatmap(test_MSE, annot=True, ax=ax, cmap="viridis")
 ax.set_xticklabels(lmbd_vals)
@@ -147,7 +147,7 @@ ax.set_ylabel("$\eta$")
 ax.set_xlabel("$\lambda$")
 fig.savefig('./Images/NN_regression1.png')
 plt.show()
-
+"""
 
 eta_n = 0.01
 lmbd_n = 0
@@ -182,7 +182,27 @@ print('MSE keras test: %0.5f (+/- %0.5f)' % (-np.mean(cv_keras['test_neg_mean_sq
 print('R2 keras test: %0.5f (+/- %0.5f)' % (-np.mean(cv_keras['test_r2']), np.std(cv_keras['test_r2'])*2))
 
 
+#GridSearchCV on Tensorflow/Keras neural network
+parameters = {'layer_sizes':([10],[50],[50,20]), 'activation_function':['sigmoid', 'relu'], 'alpha':[0, 0.01, 0.03, 0.1], 'epochs':[10,30,60]}
+clf = GridSearchCV(regressor_keras, parameters, scoring = 'accuracy', cv=5, verbose = 8, n_jobs=-1)
+clf.fit(X_train, z_train)
+df_grid_nn_Keras = pd.DataFrame.from_dict(clf.cv_results_)
 
+#order data into matrix
+df_grid_nn_Keras, row_names_nn_Keras, col_names_nn_Keras = order_gridSearchCV_data(df_grid_nn_Keras, column_param = 'alpha')
+
+#plot heatmap of results
+heatmap(df_grid_nn_Keras, 'Neural network (Keras/TensorFlow) validation accuracy (CV)', '\u03BB', 'parameters', col_names_nn_Keras, row_names_nn_Keras, True, savefig = False)
+
+#fit best Tensorflow/Keras nn model and print metrics
+print(clf.best_params_)
+nnKerasBest = KerasRegressor(build_fn=build_network)
+nnKerasBest.set_params(**clf.best_params_)
+
+cv_nn_keras_best = cross_validate(nnKerasBest, X, z[:,None], cv = 5, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False)
+print('cv_scores_nn_keras_best_test:', cv_nn_keras_best['test_neg_mean_squared_error'])
+print('MSE NN_keras_best test: %0.5f (+/- %0.5f)' % (-cv_nn_keras_best['test_neg_mean_squared_error'].mean(), cv_nn_keras_best['test_neg_mean_squared_error'].std()*2))
+print('R2 NN_keras_best test: %0.5f (+/- %0.5f)' % (cv_nn_keras_best['test_r2'].mean(), cv_nn_keras_best['test_r2'].std()*2))
 
 
 

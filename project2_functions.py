@@ -69,7 +69,7 @@ def order_grid_search_data(param_grid, param_grid_obj, val_acc, column_param = '
                 del dict_temp[column_param]
                 row_names[i] = str(dict_temp)
     dd = np.ma.masked_equal(datadata[:,0],0)
-    data_array = np.empty((sum(~dd.mask),len(col_names))) 
+    data_array = np.empty((sum(~dd.mask),len(col_names)))
     for c in range(datadata.shape[1]):
         datacolumn = np.ma.masked_equal(datadata[:,c],0)
         data_array[:,c] = datacolumn.compressed()
@@ -112,7 +112,7 @@ def surfPlot(x, y, z, xlabel = 'x', ylabel = 'y', zlabel = 'z', savefig = False,
 
 def sigmoid(x):
     s = 1/(1+np.exp(-x))
-    #s = (x>=0)/(1+np.exp(-x)) + (x<0)*exp(x)/(1+np.exp(x)) 
+    #s = (x>=0)/(1+np.exp(-x)) + (x<0)*exp(x)/(1+np.exp(x))
     return s
 
 def relu(x):
@@ -221,3 +221,54 @@ def heatmap(data, title, xlabel, ylabel, xticks, yticks, annotation, savefig = F
     ax.set_ylim(len(data)+0.25, -0.25)
     if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight')
     plt.show()
+
+def MSE(z_data, z_model):
+    n = np.size(z_model)
+    return np.sum((z_data-z_model)**2)/n
+
+def R2(z_data, z_model):
+    return 1 - np.sum((z_data - z_model) ** 2) / np.sum((z_data - np.mean(z_model)) ** 2)
+
+def cross_validation(x, y, k):
+    n = len(x)
+
+    indexes = np.arange(y.shape[0])
+    np.random.shuffle(indexes)
+    x = x[indexes]
+    y = y[indexes]
+
+    r2_train = []
+    r2_test = []
+    mse_train = []
+    mse_test = []
+
+    bias = []
+    variance = []
+    for i in range(k):
+        x_train = np.concatenate((x[:int(i*n/k)], x[int((i + 1)*n/k): ]), axis = 0)
+        x_test = x[int(i*n/k):int((i + 1)*n/k)]
+        y_train = np.concatenate((y[:int(i*n/k)], y[int((i + 1)*n/k): ]), axis = 0)
+        y_test = y[int(i*n/k):int((i + 1)*n/k)]
+
+        beta = np.linalg.pinv(x_train.T.dot(x_train)).dot(x_train.T).dot(y_train)
+        ytilde = x_train @ beta
+        ypredict = x_test @ beta
+
+        mse_train.append(MSE(y_train, ytilde))
+        mse_test.append(MSE(y_test, ypredict))
+
+        r2_train.append(R2(y_train, ytilde))
+        r2_test.append(R2(y_test, ypredict))
+
+        bias.append(np.mean((y_test - np.mean(ypredict))**2))
+        variance.append(np.mean(np.var(ypredict)))
+
+    r2_train = np.array(r2_train)
+    r2_test = np.array(r2_test)
+    mse_train = np.array(mse_train)
+    mse_test = np.array(mse_test)
+
+    bias = np.array(bias)
+    variance = np.array(variance)
+
+    return r2_test, mse_train, mse_test, bias, variance, r2_train
