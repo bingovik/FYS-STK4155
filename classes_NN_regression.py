@@ -37,7 +37,7 @@ from sklearn.model_selection import KFold
 
 class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd=0, epochs=10, batch_size=128, eta=0.1):
+    def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd=0, epochs=150, batch_size=128, eta=0.1):
         self.lmbd = lmbd
         self.epochs = epochs
         self.batch_size = batch_size
@@ -196,10 +196,10 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
 
     def __init__(self, layer_sizes= [100,20],
                 batch_size=10,
-                epochs=50,
+                epochs=150,
                 optimizer="Adam",
                 loss="mean_squared_error",
-                _lambda = 0,
+                alpha = 0,
                 activation_function = 'relu',
                 len_X = 'Xtrain'):
         self.layer_sizes = layer_sizes
@@ -207,16 +207,15 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
         self.epochs = epochs
         self.optimizer = optimizer
         self.loss = loss
-        self._lambda = _lambda
+        self.alpha = alpha
         self.activation_function = activation_function
         self.len_X = len(len_X[0])
 
     def build_network(self):
         model = Sequential()
-        #model.add(BatchNormalization())
         for layer_size in self.layer_sizes:
-            model.add(Dense(layer_size, input_dim = self.len_X, activation=self.activation_function, kernel_regularizer=regularizers.l2(self._lambda)))
-        model.add(Dense(1, activation = 'linear'))
+            model.add(Dense(layer_size, input_dim = self.len_X, activation=self.activation_function, kernel_regularizer=regularizers.l2(self.alpha)))
+        model.add(Dense(1, activation = None))
         model.compile(loss=self.loss,
                       optimizer=self.optimizer)
         return model

@@ -32,57 +32,6 @@ def build_network(layer_sizes=[50,20], n_outputs = 2,
         model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
         return model
 
-def order_gridSearchCV_data(pandas_df, column_param = '_lambda'):
-    col_values = pandas_df['param_'+column_param]
-    uniqueColumns = np.asarray(col_values.drop_duplicates())
-    data_array = np.empty((int(len(pandas_df.index)/len(uniqueColumns)),len(uniqueColumns)))
-    for i, cols in enumerate(uniqueColumns):
-        df_temp = pandas_df.loc[pandas_df['param_'+column_param]==cols]
-        row_names = df_temp['params']
-        data_array[:,i] = np.asarray(df_temp['mean_test_score'])
-    row_names = row_names.tolist()
-    for w in row_names:
-        del w[column_param]
-    row_names = [str(w) for w in row_names]
-    row_names = [w.replace('activation_function', 'a_func') for w in row_names]
-    row_names = [w.replace('layer_sizes', 'h_layers') for w in row_names]
-    row_names = [w.replace('n_hidden_neurons', 'nodes') for w in row_names]
-    row_names = [w.replace('alpha', '\u03BB') for w in row_names] #alpha with lambda haha
-    row_names = [w.replace('_lambda', '\u03BB') for w in row_names]
-    row_names = [w.replace('lmbd', '\u03BB') for w in row_names]
-    row_names = [w.replace(' ', '') for w in row_names]
-    row_names = [w.replace('sigmoid', 'sigm') for w in row_names]
-    row_names = [w.replace('{', '') for w in row_names]
-    row_names = [w.replace('}', '') for w in row_names]
-    return data_array, row_names, uniqueColumns
-
-def order_grid_search_data(param_grid, param_grid_obj, val_acc, column_param = 'alpha'):
-    col_names = param_grid[column_param]
-    row_names = [None]*len(param_grid_obj)
-    datadata = np.zeros((len(param_grid_obj),len(col_names)))
-    for i, g in enumerate(param_grid_obj):
-        for j, alph in enumerate(col_names):
-            if param_grid_obj[i][column_param] == alph:
-                datadata[i,j] = val_acc[i]
-                dict_temp = param_grid_obj[i]
-                del dict_temp[column_param]
-                row_names[i] = str(dict_temp)
-    dd = np.ma.masked_equal(datadata[:,0],0)
-    data_array = np.empty((sum(~dd.mask),len(col_names))) 
-    for c in range(datadata.shape[1]):
-        datacolumn = np.ma.masked_equal(datadata[:,c],0)
-        data_array[:,c] = datacolumn.compressed()
-    ind_list = [i for i, x in enumerate(dd.mask) if not x]
-    row_names = [row_names[i] for i in ind_list]
-    row_names = [w.replace('activation_function', 'a_func') for w in row_names]
-    row_names = [w.replace('layer_sizes', 'nodes') for w in row_names]
-    row_names = [w.replace('alpha', '\u03BB') for w in row_names] #alpha with lambda...
-    row_names = [w.replace(' ', '') for w in row_names]
-    row_names = [w.replace('sigmoid', 'sigm') for w in row_names]
-    row_names = [w.replace('{', '') for w in row_names]
-    row_names = [w.replace('}', '') for w in row_names]
-    return data_array, row_names, col_names
-
 def FrankeFunction(x,y):
     term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
     term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
@@ -218,3 +167,90 @@ def heatmap(data, title, xlabel, ylabel, xticks, yticks, annotation, savefig = F
     ax.set_ylim(len(data)+0.25, -0.25)
     if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight')
     plt.show()
+
+def order_gridSearchCV_data(pandas_df, column_param = '_lambda'):
+    col_values = pandas_df['param_'+column_param]
+    uniqueColumns = np.asarray(col_values.drop_duplicates())
+    data_array = np.empty((int(len(pandas_df.index)/len(uniqueColumns)),len(uniqueColumns)))
+    for i, cols in enumerate(uniqueColumns):
+        df_temp = pandas_df.loc[pandas_df['param_'+column_param]==cols]
+        row_names = df_temp['params']
+        data_array[:,i] = np.asarray(df_temp['mean_test_score'])
+    row_names = row_names.tolist()
+    for w in row_names:
+        del w[column_param]
+    row_names = [str(w) for w in row_names]
+    row_names = [w.replace('activation_function', 'a_func') for w in row_names]
+    row_names = [w.replace('layer_sizes', 'h_layers') for w in row_names]
+    row_names = [w.replace('n_hidden_neurons', 'nodes') for w in row_names]
+    row_names = [w.replace('alpha', '\u03BB') for w in row_names] #alpha with lambda haha
+    row_names = [w.replace('_lambda', '\u03BB') for w in row_names]
+    row_names = [w.replace('lmbd', '\u03BB') for w in row_names]
+    row_names = [w.replace(' ', '') for w in row_names]
+    row_names = [w.replace('sigmoid', 'sigm') for w in row_names]
+    row_names = [w.replace('{', '') for w in row_names]
+    row_names = [w.replace('}', '') for w in row_names]
+    return data_array, row_names, uniqueColumns
+
+def order_grid_search_data(param_grid, param_grid_obj, val_acc, column_param = 'alpha'):
+    col_names = param_grid[column_param]
+    row_names = [None]*len(param_grid_obj)
+    datadata = np.zeros((len(param_grid_obj),len(col_names)))
+    for i, g in enumerate(param_grid_obj):
+        for j, alph in enumerate(col_names):
+            if param_grid_obj[i][column_param] == alph:
+                datadata[i,j] = val_acc[i]
+                dict_temp = param_grid_obj[i]
+                del dict_temp[column_param]
+                row_names[i] = str(dict_temp)
+    dd = np.ma.masked_equal(datadata[:,0],0)
+    data_array = np.empty((sum(~dd.mask),len(col_names))) 
+    for c in range(datadata.shape[1]):
+        datacolumn = np.ma.masked_equal(datadata[:,c],0)
+        data_array[:,c] = datacolumn.compressed()
+    ind_list = [i for i, x in enumerate(dd.mask) if not x]
+    row_names = [row_names[i] for i in ind_list]
+    row_names = [w.replace('activation_function', 'a_func') for w in row_names]
+    row_names = [w.replace('layer_sizes', 'nodes') for w in row_names]
+    row_names = [w.replace('alpha', '\u03BB') for w in row_names] #alpha with lambda...
+    row_names = [w.replace(' ', '') for w in row_names]
+    row_names = [w.replace('sigmoid', 'sigm') for w in row_names]
+    row_names = [w.replace('{', '') for w in row_names]
+    row_names = [w.replace('}', '') for w in row_names]
+    return data_array, row_names, col_names
+
+def cross_validation(x, y, k):
+    n = len(x)
+
+    indexes = np.arange(y.shape[0])
+    np.random.shuffle(indexes)
+    x = x[indexes]
+    y = y[indexes]
+
+    r2_train = []
+    r2_test = []
+    mse_train = []
+    mse_test = []
+
+    for i in range(k):
+        x_train = np.concatenate((x[:int(i*n/k)], x[int((i + 1)*n/k): ]), axis = 0)
+        x_test = x[int(i*n/k):int((i + 1)*n/k)]
+        y_train = np.concatenate((y[:int(i*n/k)], y[int((i + 1)*n/k): ]), axis = 0)
+        y_test = y[int(i*n/k):int((i + 1)*n/k)]
+
+        beta = np.linalg.pinv(x_train.T.dot(x_train)).dot(x_train.T).dot(y_train)
+        ytilde = x_train @ beta
+        ypredict = x_test @ beta
+
+        mse_train.append(MSE(y_train, ytilde))
+        mse_test.append(MSE(y_test, ypredict))
+
+        r2_train.append(R2(y_train, ytilde))
+        r2_test.append(R2(y_test, ypredict))
+
+    r2_train = np.array(r2_train)
+    r2_test = np.array(r2_test)
+    mse_train = np.array(mse_train)
+    mse_test = np.array(mse_test)
+
+    return mse_train, mse_test, r2_train, r2_test
