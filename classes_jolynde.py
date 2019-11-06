@@ -33,7 +33,7 @@ from keras import regularizers
 import tensorflow as tf
 
 class NeuralNetwork(BaseEstimator, ClassifierMixin):
-
+    #inherits properties from Scitkit-learn objects to be able to perform gridSearchCV
     def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd=0, epochs=10, batch_size=128, eta=0.01):
         self.lmbd = lmbd
         self.epochs = epochs
@@ -179,8 +179,6 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
             if plot_learning:
                 acc_train[i] = accuracy_score(self.Y_data_full, self.predict(self.X_data_full))
                 acc_test[i] = accuracy_score(y_test, self.predict(X_test))
-                #acc_train[i] = categorical_cross_entropy(self.Y_data_full, self.predict(self.X_data_full))
-                #acc_test[i] = categorical_cross_entropy(y_test, self.predict(X_test))
 
         if plot_learning:
             plot_several(np.repeat(np.arange(1,self.epochs+1)[:,None], 2, axis=1),
@@ -192,7 +190,7 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
         return acc_train, acc_test
 
 class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
-
+    #inherits properties from Scitkit-learn objects to be able to perform gridSearchCV
     def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd=0, epochs=10, batch_size=128, eta=0.1):
         self.lmbd = lmbd
         self.epochs = epochs
@@ -298,9 +296,6 @@ class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
         w_grad[0] = self.X_data.T@error[0] + self.lmbd * self.w[0]
         bias_grad[0] = np.sum(error[0], axis = 0)
 
-        if np.isnan(sum(sum(w_grad[0]))):
-            pdb.set_trace()
-
         #updating weights and bias
         self.w = list(map(add, self.w, [-i*self.eta for i in w_grad]))
         self.bias = list(map(add, self.bias, [-i*self.eta for i in bias_grad]))
@@ -331,12 +326,8 @@ class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
                 self.backpropagation()
 
             if plot_learning:
-                try:
-                    MSE_train[i] = mean_squared_error(self.Y_data_full, self.predict(self.X_data_full))
-                    MSE_test[i] = mean_squared_error(y_test, self.predict(X_test))
-                except:
-                    print('oj')
-                    pdb.set_trace()
+                MSE_train[i] = mean_squared_error(self.Y_data_full, self.predict(self.X_data_full))
+                MSE_test[i] = mean_squared_error(y_test, self.predict(X_test))
 
         if plot_learning:
             plot_several(np.repeat(np.arange(1,self.epochs+1)[:,None], 2, axis=1),
@@ -347,91 +338,8 @@ class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
 
         return MSE_train, MSE_test
 
-class Neural_TensorFlow:
-
-    def __init__(self, layer_sizes=[50,20],
-                batch_size=32,
-                epochs=10,
-                optimizer="Adam",
-                loss="binary_crossentropy",
-                alpha = 0.0,
-                activation_function = 'relu',
-                ):
-        self.layer_sizes = layer_sizes
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.optimizer = optimizer
-        self.loss = loss
-        self.alpha = alpha
-        self.activation_function = activation_function
-
-    def get_params(self, deep=True):
-        return {k: v for k, v in self.__dict__.items() if not callable(v)}
-
-    def set_params(self, **parameters):
-        for parameter, value in parameters.items():
-            setattr(self, parameter, value)
-        return self
-
-    def build_network(self, X, y):
-        model = Sequential()
-        #model.add(BatchNormalization())
-        for layer_size in self.layer_sizes:
-            model.add(Dense(layer_size, activation=self.activation_function,kernel_regularizer=regularizers.l2(self.alpha)))
-        model.add(Dense(1, activation='sigmoid'))
-        model.compile(loss=self.loss,
-                      optimizer=self.optimizer,
-                      metrics=['accuracy'])
-        return model
-
-    def fit(self, X, y):
-        self.model = self.build_network(X, y)
-        self.model.fit(X, y, epochs=self.epochs, batch_size=self.batch_size, verbose=0)
-
-    #def predict(self, Xtest):
-    #    return self.model.predict(Xtest)
-
-    def predict(self, Xtest):
-        return self.model.predict_classes(Xtest)
-
-    def predict_proba(self, Xtest):
-        return self.model.predict(Xtest)
-
-    #def predict_classes(self, Xtest):
-    #    return self.model.predict_classes(Xtest)
-
-    def accuracyscore(self, Xtest, ytest):
-        return self.model.evaluate(Xtest, ytest)
-        print(accuracy)
-
-######## LOGISTIC REGRESSION
-
-class logReg_scikit:
-
-    #def __init__(self)
-
-    def build_model(self):
-        model = LogisticRegression(fit_intercept = True)
-        return model
-
-    def fit(self, X, y):
-        #self.model = LogisticRegression()
-        self.model = self.build_model()
-        self.model.fit(X, y)
-
-    def get_proba(self, X):
-        return self.model.predict_proba(X)
-
-    def predict(self, X):
-        return self.model.predict(X)
-
-    def results(self, X, y):
-        results = self.fit(X, y)
-        return self.results.fit(X,y)
-
-
 class logisticRegression(BaseEstimator, ClassifierMixin):
-
+    #inherits properties from Scitkit-learn objects to be able to perform gridSearchCV
     def __init__(self, _lambda = 0, eta = 0.1, max_iter = 1000):
         self._lambda = _lambda; self.eta = eta; self.max_iter = max_iter
 
@@ -440,12 +348,14 @@ class logisticRegression(BaseEstimator, ClassifierMixin):
         X = np.hstack((np.ones(X.shape[0])[:,None], X))
         self.beta = np.zeros(X.shape[1])[:,None]
         n = X.shape[0]
+
+        #run full gradient descent
         for i in range(self.max_iter):
             y_pred = sigmoid(X@self.beta)
             grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
             self.beta = self.beta - eta*grad
 
-    def train_track_test(self, X, y, X_test, y_test, plot = False, savefig = False, filename = ''):
+    def fit_track_learning(self, X, y, X_test, y_test, plot = False, savefig = False, filename = ''):
         _lambda = self._lambda; eta = self.eta
         X = np.hstack((np.ones(X.shape[0])[:,None], X))
         X_test = np.hstack((np.ones(X_test.shape[0])[:,None], X_test))
@@ -453,12 +363,13 @@ class logisticRegression(BaseEstimator, ClassifierMixin):
         n = X.shape[0]
         cross_entropy_train = np.zeros(self.max_iter)
         cross_entropy_test = np.zeros(self.max_iter)
+
+        #run full gradient descent
         for i in range(self.max_iter):
             y_pred = sigmoid(X@self.beta)
             y_pred_test = sigmoid(X_test@self.beta)
             cross_entropy_train[i] = categorical_cross_entropy(y_pred,y)
             cross_entropy_test[i] = categorical_cross_entropy(y_pred_test,y_test)
-            #print(categorical_cross_entropy(y_pred,y),categorical_cross_entropy(y_pred_test,y_test))
             grad = X.T@(y_pred - y)/n + np.vstack((0,_lambda*self.beta[1:]/n))
             self.beta = self.beta - eta*grad
         if plot:
@@ -467,6 +378,7 @@ class logisticRegression(BaseEstimator, ClassifierMixin):
                 ['r-', 'b-'], ['train', 'test'],
                 'iterations', 'cross entropy', 'Logistic Regression Learning',
                 savefig = savefig, figname = filename)
+        return cross_entropy_train[i], cross_entropy_test[i]
 
     def get_proba(self, X):
         X = np.hstack((np.ones(X.shape[0])[:,None], X))

@@ -54,7 +54,6 @@ def order_gridSearchCV_data(pandas_df, column_param = '_lambda'):
     row_names = [w.replace('sigmoid', 'sigm') for w in row_names]
     row_names = [w.replace('{', '') for w in row_names]
     row_names = [w.replace('}', '') for w in row_names]
-    #row_names = [w.replace(',', '\n') for w in row_names]
     return data_array, row_names, uniqueColumns
 
 def order_grid_search_data(param_grid, param_grid_obj, val_acc, column_param = 'alpha'):
@@ -82,7 +81,6 @@ def order_grid_search_data(param_grid, param_grid_obj, val_acc, column_param = '
     row_names = [w.replace('sigmoid', 'sigm') for w in row_names]
     row_names = [w.replace('{', '') for w in row_names]
     row_names = [w.replace('}', '') for w in row_names]
-    #row_names = [w.replace(',', '\n') for w in row_names]
     return data_array, row_names, col_names
 
 def FrankeFunction(x,y):
@@ -206,7 +204,6 @@ def plot_several(x_data, y_data, colors, labels, xlabel, ylabel, title, savefig 
     for i in range(x_data.shape[1]):
         plt.plot(x_data[:,i], y_data[:,i], label = labels[i])
     leg = ax.legend()
-    pdb.set_trace()
     if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight')
     plt.show()
 
