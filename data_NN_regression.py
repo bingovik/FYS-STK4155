@@ -5,46 +5,33 @@ import random
 import seaborn as sns
 import pdb
 
-from sklearn.model_selection import train_test_split, cross_validate, ShuffleSplit
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import cross_val_score, cross_validate
-from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures
-from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import train_test_split, cross_validate, ShuffleSplit, GridSearchCV, cross_val_score
+from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures, StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score, mean_squared_error
-from sklearn.metrics import classification_report
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
-
 import matplotlib.pyplot as plt
-import matplotlib.patches
-
-#import statsmodels.api as sm
-from project2_functions import *
-import classes_jolynde
 
 from project2_functions import *
-import matplotlib.pyplot as plt
-from decimal import Decimal
-import seaborn as sns
+
 sns.set()
 
 # Creating the Franke data
 poly_degree = 7
-
 seed = 0
 x = np.sort(np.random.rand(100))
 y = np.sort(np.random.rand(100))
 xx, yy = np.meshgrid(x,y)
 zz_ = FrankeFunction(xx,yy)
+
 sigma = 0.1 #random noise std dev
 noise = np.resize(np.random.normal(0, sigma, xx.size),(len(x),len(y)))
 zz = zz_ + noise
 
 list_of_features = []
-z = np.ravel(zz) #[:,None]
-z_true = np.ravel(zz_) #[:,None]
+z = np.ravel(zz)
+z_true = np.ravel(zz_)
 X_orig = np.vstack((np.ravel(xx), np.ravel(yy))).T
 
 # Generate design matrix of polygons up to with chosen polynomial degree
@@ -64,21 +51,22 @@ X[:,1:] = sc.transform(X[:,1:])
 
 #------------------------------------#
 
-### NEURAL NET REGRESSION
 from regression import *
 
+# Set up initial parameters
 layer_size = (100,20)
 epochs = 150
-batch_size = 10
+batch_size = 16
 eta = 0.01
 lambda_ = 0
 activation_function = 'relu'
-"""
+
 nn_keras = Neural_TensorFlow(layer_sizes = layer_size, activation_function = activation_function, alpha = lambda_, len_X = X_train)
 nn = NeuralNetworkRegressor(n_hidden_neurons = layer_size, activation_function = activation_function, eta = eta, epochs = epochs, batch_size=batch_size)
-"""
+
+# Make sure cv uses randomly splitted data
 cv = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
-"""
+
 cv_nn2 = cross_validate(nn, X, z[:,None], cv = cv, n_jobs = -1, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False)
 print('cv_scores_nn_test:', cv_nn2['test_neg_mean_squared_error'])
 print('MSE NN test: %0.5f (+/- %0.5f)' % (-cv_nn2['test_neg_mean_squared_error'].mean(), cv_nn2['test_neg_mean_squared_error'].std()*2))
@@ -91,21 +79,15 @@ print('MSE keras test: %0.5f (+/- %0.5f)' % (-np.mean(cv_keras['test_neg_mean_sq
 print('R2 keras test: %0.5f (+/- %0.5f)' % (np.mean(cv_keras['test_r2']), np.std(cv_keras['test_r2'])*2))
 
 ##### OLS REGRESSION
+# To compare the outcome
 k = 5
 mse_train, mse_test, r2_train, r2_test = cross_validation(X, z, k)
 print("cv_MSE_OLS test: %0.5f (+/- %0.5f)" % (mse_test.mean(), mse_test.std()*2))
 print("cv_R2_OLS test: %0.5f (+/- %0.5f)" % (r2_test.mean(), r2_test.std()*2))
-"""
-"""
-# Which value for eta & lambda
-eta_vals = [1e-6, 1e-4, 0.005, 1e-2, 0.05] #np.logspace(-2, 1, 7)
-lmbd_vals = [0, 1e-5, 1e-4, 1e-3, 0.01, 0.1] #np.logspace(-2, 1, 7)
 
-DNN_nn = np.zeros((len(eta_vals), len(lmbd_vals)), dtype=object)
+
 scores = np.zeros((len(eta_vals), len(lmbd_vals)))
-train_MSE = np.zeros((len(eta_vals), len(lmbd_vals)))
 test_MSE = np.zeros((len(eta_vals), len(lmbd_vals)))
-test_true_MSE = np.zeros((len(eta_vals), len(lmbd_vals)))
 for i, eta in enumerate(eta_vals):
     for j, lmbd in enumerate(lmbd_vals):
         DNN_ = NeuralNetworkRegressor(activation_function = activation_function, n_hidden_neurons = layer_size, epochs = epochs, batch_size = batch_size,
@@ -124,7 +106,6 @@ for i, eta in enumerate(eta_vals):
         #train_MSE[i][j] = MSE(z_train[:,None], DNN_.predict(X_train))
         #test_true_MSE[i][j] = MSE(z_true_test[:,None], DNN_.predict(X_test))
 
-
 fig, ax = plt.subplots(figsize = (10, 10))
 sns.heatmap(test_MSE, annot=True, ax=ax, cmap="viridis", fmt = '.5g')
 ax.set_xticklabels(lmbd_vals)
@@ -134,16 +115,14 @@ ax.set_ylabel("$\eta$")
 ax.set_xlabel("$\lambda$")
 fig.savefig('./Images/NN_regression1.png')
 plt.show()
-"""
 
 eta_n = 0.01
 lambda_n = 1e-5
 
-"""
-# ADD GRIDSEARCH
-parameters = {'n_hidden_neurons':((10,),(100,),(100,20),(128,64,32)), 'activation_function':['sigmoid', 'relu'], 'epochs':[50,100, 150]}
+#GridSearchCV for neural network
+parameters = {'n_hidden_neurons':((10,),(100,),(100,20),(128,64,32)), 'activation_function':['sigmoid', 'relu'], 'batch_size':[16,32,64]}
 nn = NeuralNetworkRegressor(eta = eta_n, lmbd = lambda_n)
-clf = GridSearchCV(nn, parameters, scoring = 'neg_mean_squared_error', cv=5, verbose = 0)
+clf = GridSearchCV(nn, parameters, scoring = 'neg_mean_squared_error', cv=cv, verbose = 0)
 clf.fit(X, z[:,None])
 
 print(clf.best_params_)
@@ -153,20 +132,10 @@ print('cv_scores_nn_best_test:', cv_nn_best['test_neg_mean_squared_error'])
 print('MSE NN_best test: %0.5f (+/- %0.5f)' % (-cv_nn_best['test_neg_mean_squared_error'].mean(), cv_nn_best['test_neg_mean_squared_error'].std()*2))
 print('R2 NN_best test: %0.5f (+/- %0.5f)' % (cv_nn_best['test_r2'].mean(), cv_nn_best['test_r2'].std()*2))
 
-
-# Compare with Keras
-regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=epochs, batch_size=batch_size, verbose = 0)
-
-cv_keras = cross_validate(regressor_keras, X, z, cv = cv, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False, verbose = 0)
-print('cv_scores_keras:', cv_keras['test_neg_mean_squared_error'])
-print('MSE keras test: %0.5f (+/- %0.5f)' % (-np.mean(cv_keras['test_neg_mean_squared_error']), np.std(cv_keras['test_neg_mean_squared_error'])*2))
-print('R2 keras test: %0.5f (+/- %0.5f)' % (np.mean(cv_keras['test_r2']), np.std(cv_keras['test_r2'])*2))
-
-
 #GridSearchCV on Tensorflow/Keras neural network
 regressor_keras_gs = KerasRegressor(build_fn=build_network, loss = 'mean_squared_error', output_activation = None, alpha = lambda_n, n_outputs = 1, verbose = 0)
 
-parameters = {'layer_sizes':((10,),(100,),(100,20), (128,64,32)), 'activation_function':['sigmoid', 'relu'], 'epochs':[50,100, 150]}
+parameters = {'layer_sizes':((10,),(100,),(100,20), (128,64,32)), 'activation_function':['sigmoid', 'relu'], 'batch_size':[16,32,64]}
 clf = GridSearchCV(regressor_keras_gs, parameters, scoring = 'neg_mean_squared_error', cv=cv, verbose = 0, n_jobs=-1)
 clf.fit(X_train, z_train)
 df_grid_nn_Keras = pd.DataFrame.from_dict(clf.cv_results_)
@@ -177,9 +146,11 @@ cv_nn_keras_best = cross_validate(nnKerasBest, X, z[:,None], cv = cv, scoring = 
 print('cv_scores_nn_keras_best_test:', cv_nn_keras_best['test_neg_mean_squared_error'])
 print('MSE NN_keras_best test: %0.5f (+/- %0.5f)' % (-cv_nn_keras_best['test_neg_mean_squared_error'].mean(), cv_nn_keras_best['test_neg_mean_squared_error'].std()*2))
 print('R2 NN_keras_best test: %0.5f (+/- %0.5f)' % (cv_nn_keras_best['test_r2'].mean(), cv_nn_keras_best['test_r2'].std()*2))
-"""
+
 
 ## BEST MODELS
+
+print('_______BEST MODELS_________')
 layer_size = (128,64,32)
 epochs = 150
 batch_size = 32
@@ -189,20 +160,20 @@ activation_function = 'relu'
 
 nn_keras1 = Neural_TensorFlow(layer_sizes = layer_size, activation_function = activation_function, alpha = lambda_, len_X = X_train)
 nn2 = NeuralNetworkRegressor(n_hidden_neurons = layer_size, activation_function = activation_function, eta = eta, lmbd = lambda_, epochs = epochs, batch_size=batch_size)
-"""
+
 cv_nn1 = cross_validate(nn2, X, z[:,None], cv = cv, n_jobs = -1, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False)
 print('cv_scores_nn_test:', cv_nn1['test_neg_mean_squared_error'])
 print('MSE NN test: %0.5f (+/- %0.5f)' % (-cv_nn1['test_neg_mean_squared_error'].mean(), cv_nn1['test_neg_mean_squared_error'].std()*2))
 print('R2 NN test: %0.5f (+/- %0.5f)' % (cv_nn1['test_r2'].mean(), cv_nn1['test_r2'].std()*2))
 
-regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=epochs, batch_size=batch_size, verbose = 0)
+regressor_keras = KerasRegressor(build_fn=nn_keras1.build_network, epochs=epochs, batch_size=batch_size, verbose = 0)
 cv_keras = cross_validate(regressor_keras, X, z, cv = cv, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False, verbose = 0, n_jobs = -1)
 print('cv_scores_keras:', cv_keras['test_neg_mean_squared_error'])
 print('MSE keras test: %0.5f (+/- %0.5f)' % (-np.mean(cv_keras['test_neg_mean_squared_error']), np.std(cv_keras['test_neg_mean_squared_error'])*2))
 print('R2 keras test: %0.5f (+/- %0.5f)' % (np.mean(cv_keras['test_r2']), np.std(cv_keras['test_r2'])*2))
-"""
 
-## TRUE data
+
+## And a final check on how they perform on the true data
 regressor_keras = KerasRegressor(build_fn=nn_keras1.build_network, epochs=epochs, batch_size=batch_size, verbose = 0)
 regressor_keras.fit(X_train, z_train)
 keras_pred = regressor_keras.predict(X_test)
@@ -227,48 +198,3 @@ print("mse_ols_test:", MSE(z_test, zpredict))
 print("mse_ols_true:", MSE(z_true_test, zpredict))
 print("R2_ols_test:", R2(z_test, zpredict))
 print("R2_ols_test:", R2(z_true_test, zpredict))
-
-
-"""
-nn = classes_jolynde.NeuralNetworkRegressor(n_hidden_neurons = (100,20), activation_function = 'relu', eta = 0.01, epochs = 500, batch_size=128)
-nn.fit(X_train,z_train, X_test = X_test, y_test = z_test, plot_learning = True)
-
-nn = classes_jolynde.NeuralNetworkRegressor(n_hidden_neurons = (40,20), activation_function = 'relu', eta = 0.01, epochs = 500, batch_size=128)
-nn.fit(X_train,z_train, X_test = X_test, y_test = z_test, plot_learning = True)
-
-nn = classes_jolynde.NeuralNetworkRegressor(n_hidden_neurons = 100, activation_function = 'relu', eta = 0.01, epochs = 500, batch_size=128)
-nn.fit(X_train,z_train, X_test = X_test, y_test = z_test, plot_learning = True)
-
-nn = classes_jolynde.NeuralNetworkRegressor(n_hidden_neurons = (16,8), activation_function = 'relu', eta = 0.01, epochs = 500, batch_size=128)
-nn.fit(X_train,z_train, X_test = X_test, y_test = z_test, plot_learning = True)
-
-z_predict = nn.predict(X)
-surfPlot(xx, yy, z_predict.reshape((len(y),len(x))), savefig = False, figname = 'Ridge_best_val_Surf' + fignamePostFix)
-
-
-# running regressions using different polynomial fits up to poly_degree_max
-for poly_degree in poly_degrees:
-    print('Polynomial degree: %g' % poly_degree)
-    # creating polynomials of degree poly_degree
-    poly = PolynomialFeatures(poly_degree) #inlude bias = false
-    X = poly.fit_transform(X_orig)
-    features = poly.get_feature_names(['x','y'])
-    list_of_features.append(features)
-
-    # Split and scale the data
-    seed = 0
-    X_train, X_test, z_train, z_test = train_test_split(X,z, test_size = 0.2)
-    sc = StandardScaler()
-    X_train[:,1:] = sc.fit_transform(X_train[:,1:])
-    X_test[:,1:] = sc.transform(X_test[:,1:])
-    X[:,1:] = sc.transform(X[:,1:])
-
-    scikitlearn_OLS = LinearRegression()
-    scikitlearn_OLS.fit(X_train, z_train)
-
-    nn = classes_jolynde.NeuralNetworkRegressor(n_hidden_neurons = (100,20), activation_function = 'relu', eta = 0.03, epochs = 160, batch_size=128)
-    nn.fit(X_train,z_train, X_test = X_test, y_test = z_test, plot_learning = True)
-    z_predict = nn.predict(X)
-    surfPlot(xx, yy, z_predict.reshape((len(y),len(x))), savefig = False, figname = 'Ridge_best_val_Surf' + fignamePostFix)
-
-"""

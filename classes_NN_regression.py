@@ -37,7 +37,7 @@ from sklearn.model_selection import KFold
 
 class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd=0, epochs=10, batch_size=128, eta=0.1):
+    def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd=0, epochs=150, batch_size=128, eta=0.1):
         self.lmbd = lmbd
         self.epochs = epochs
         self.batch_size = batch_size
@@ -196,7 +196,7 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
 
     def __init__(self, layer_sizes= [100,20],
                 batch_size=10,
-                epochs=50,
+                epochs=150,
                 optimizer="Adam",
                 loss="mean_squared_error",
                 alpha = 0,

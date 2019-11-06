@@ -216,6 +216,11 @@ nn_keras = build_network(layer_sizes=50, alpha=0, activation_function='relu')
 nn_keras.fit(Xtrain, Y_train_onehot, validation_data = (Xtest, Y_test_onehot), epochs = 40)
 plot_several(np.repeat(np.arange(len(nn_keras.history.history['loss']))[:,None]+1, 2, axis=1), np.hstack((np.asarray(nn_keras.history.history['loss'])[:,None],np.asarray(nn_keras.history.history['val_loss'])[:,None])), ['r-', 'b-'], ['Train', 'Test'], 'Epochs', 'Loss', 'Training loss', savefig = False, figname = '')
 
+from learningrate_plot import *
+eta_vals = [1e-6, 5e-6, 1e-5, 1e-4, 5e-4, 1e-3, 1e-2, 5e-2]
+k = 5
+lr_plot(nnTest, Xtrain, Y_train_onehot, eta_vals, k)
+
 '''
 #GridSearchCV on Tensorflow/Keras neural network
 parameters = {'layer_sizes':([10],[50],[50,20]), 'activation_function':['sigmoid', 'relu'], 'alpha':[0, 0.01, 0.03, 0.1], 'epochs':[10,30,60]}

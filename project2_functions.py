@@ -15,7 +15,7 @@ import seaborn as sns
 
 def build_network(layer_sizes=[50,20], n_outputs = 2,
                 batch_size=32,
-                epochs=10,
+                epochs=150,
                 optimizer="Adam",
                 loss="categorical_crossentropy",
                 alpha = 0.0,
