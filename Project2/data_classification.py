@@ -21,7 +21,7 @@ import matplotlib.patches
 
 #import statsmodels.api as sm
 from project2_functions import *
-import classes_jolynde
+import classes_classification
 
 #fignamePostFix = ''
 #fignamePostFix = 'pca_remove_outliers'
@@ -68,11 +68,13 @@ data_todrop = np.unique(data_todrop)
 df.drop(data_todrop, inplace = True)
 
 # Correlation matrix
+'''
 correlation_matrix = df.corr().round(1)
 fig6, ax = plt.subplots(figsize=(15,15))
 sns.heatmap(data=correlation_matrix, annot=True)
 fig6.savefig('./Images/corr_matrix.png')
 plt.show()
+'''
 
 # Create the independent and dependent variables
 X = df.loc[:, df.columns != 'defaultPayment'].values
@@ -119,12 +121,12 @@ plot_several(np.hstack((n_comp[:,None],n_comp[:,None])), 100*np.hstack((percento
 '''
 
 #Our NN single test
-nnTest = classes_jolynde.NeuralNetwork(n_hidden_neurons=(50,20), activation_function='sigmoid', lmbd=0.1, epochs=20, batch_size=64, eta=0.005)
+nnTest = classes_classification.NeuralNetwork(n_hidden_neurons=(50,20), activation_function='sigmoid', lmbd=0.1, epochs=20, batch_size=64, eta=0.005)
 history = nnTest.fit(Xtrain, Y_train_onehot, X_test = Xtest, y_test = Y_test_onehot, plot_learning=True)
 
 #Keras/TensorFlow single test
 nn_keras = build_network(layer_sizes=[50,20], alpha=0.1, activation_function='relu')
-nn_keras.fit(Xtrain, Y_train_onehot, validation_data = (Xtest, Y_test_onehot), epochs = 80)
+nn_keras.fit(Xtrain, Y_train_onehot, validation_data = (Xtest, Y_test_onehot), epochs = 40)
 plot_several(np.repeat(np.arange(len(nn_keras.history.history['loss']))[:,None]+1, 2, axis=1), np.hstack((np.asarray(nn_keras.history.history['loss'])[:,None],np.asarray(nn_keras.history.history['val_loss'])[:,None])), ['r-', 'b-'], ['Train', 'Test'], 'Epochs', 'Loss', 'Training loss', savefig = False, figname = '')
 
 #GridSearchCV on Tensorflow/Keras neural network
@@ -158,7 +160,7 @@ print(conf)
 #GridSearchCV on our own neural network
 parameters = {'n_hidden_neurons':((10,),(50,),(50,20)), 'activation_function':['sigmoid', 'relu'], 'lmbd':[0, 0.01, 0.03, 0.1, 0.3], 'epochs':[10,30,60]}
 #parameters = {'n_hidden_neurons':((10,),(50,)), 'activation_function':['sigmoid', 'relu'], 'lmbd':[0.1, 0.3], 'epochs':[1,3]}
-nn = classes_jolynde.NeuralNetwork(eta=0.005)
+nn = classes_classification.NeuralNetwork(eta=0.005)
 clf = GridSearchCV(nn, parameters, scoring = 'accuracy', cv=5, verbose = 6)
 clf.fit(Xtrain,Y_train_onehot)
 df_grid_nn = pd.DataFrame.from_dict(clf.cv_results_)
@@ -171,7 +173,7 @@ heatmap(data_array_nn, 'Neural network validation accuracy (CV)', '\u03BB', 'par
 
 #fit best nn model and print metrics
 print(clf.best_params_)
-nnBest = classes_jolynde.NeuralNetwork(**clf.best_params_, eta=0.005)
+nnBest = classes_classification.NeuralNetwork(**clf.best_params_, eta=0.005)
 nnBest.fit(Xtrain, Y_train_onehot, Xtest, Y_test_onehot, plot_learning=True, savefig=True, filename='NN_learning'+str(clf.best_params_)+'.png')
 print('Classification report for neural network:')
 print(classification_report(Y_test_onehot, nnBest.predict(Xtest)))
@@ -182,11 +184,9 @@ print('Confusion matrix for neural network:')
 conf = confusion_matrix(Y_test_onehot[:,1], nnBest.predict(Xtest)[:,1])
 print(conf)
 
-pdb.set_trace()
-
 #GridSearchCV on our own logistic regression
 parameters = {'_lambda':[0, 1, 3, 10, 30, 100], 'eta':[0.01,0.1,1, 3], 'max_iter':[100,500,1000]}
-logReg = classes_jolynde.logisticRegression()
+logReg = classes_classification.logisticRegression()
 clf = GridSearchCV(logReg, parameters, scoring = 'accuracy', cv=5, verbose = 0)
 clf.fit(Xtrain,ytrain)
 df_grid_logReg = pd.DataFrame.from_dict(clf.cv_results_)
@@ -199,7 +199,7 @@ heatmap(data_array_logReg, 'Logistic regression validation accuracy (CV)', '\u03
 
 #fit best logistic regression model and print metrics
 print(clf.best_params_)
-logRegBest = classes_jolynde.logisticRegression(**clf.best_params_)
+logRegBest = classes_classification.logisticRegression(**clf.best_params_)
 _, _ = logRegBest.fit_track_learning(Xtrain, ytrain, X_test = Xtest, y_test = ytest, plot = True, savefig = True, filename = 'logReg_learning')
 print('Classification report for logistic regression:')
 print(classification_report(ytest, logRegBest.predict(Xtest)))

@@ -14,6 +14,7 @@ from sklearn.model_selection import KFold
 import matplotlib.pyplot as plt
 
 from project2_functions import *
+from classes_NN_regression import *
 
 sns.set()
 
@@ -51,7 +52,7 @@ X[:,1:] = sc.transform(X[:,1:])
 
 #------------------------------------#
 
-from regression import *
+
 
 # Set up initial parameters
 layer_size = (100,20)
