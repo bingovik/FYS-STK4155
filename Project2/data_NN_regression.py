@@ -123,7 +123,7 @@ lambda_n = 1e-5
 parameters = {'n_hidden_neurons':((10,),(100,),(100,20),(128,64,32)), 'activation_function':['sigmoid', 'relu'], 'batch_size':[16,32,64]}
 nn = NeuralNetworkRegressor(eta = eta_n, lmbd = lambda_n)
 clf = GridSearchCV(nn, parameters, scoring = 'neg_mean_squared_error', cv=cv, verbose = 0)
-clf.fit(X, z[:,None])
+clf.fit(X_train, z_train[:,None])
 
 print(clf.best_params_)
 nnBest = NeuralNetworkRegressor(**clf.best_params_, eta = eta_n, lmbd = lambda_n)
