@@ -32,7 +32,6 @@ from keras.optimizers import RMSprop
 from keras import regularizers
 import tensorflow as tf
 
-
 class NeuralNetwork(BaseEstimator, ClassifierMixin):
 
     def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd=0, epochs=10, batch_size=128, eta=0.01):
@@ -45,7 +44,7 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
             n_hidden_neurons = (n_hidden_neurons,)
         self.n_hidden_neurons = n_hidden_neurons
         self.n_hidden_layers = len(n_hidden_neurons)
-        
+
         #setting the activation function and its derivative of z
         if activation_function == 'relu':
             self.activation = relu
@@ -81,7 +80,7 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
 
     def feed_forward(self):
         # feed-forward for training
-        
+
         #calculating first hidden layer input and activation
         self.z[0] = self.X_data@self.w[0] + self.bias[0]
         self.a[0] = self.activation(self.z[0])
@@ -178,7 +177,6 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
                 self.backpropagation()
 
             if plot_learning:
-                pdb.set_trace()
                 acc_train[i] = accuracy_score(self.Y_data_full, self.predict(self.X_data_full))
                 acc_test[i] = accuracy_score(y_test, self.predict(X_test))
                 #acc_train[i] = categorical_cross_entropy(self.Y_data_full, self.predict(self.X_data_full))
@@ -188,7 +186,7 @@ class NeuralNetwork(BaseEstimator, ClassifierMixin):
             plot_several(np.repeat(np.arange(1,self.epochs+1)[:,None], 2, axis=1),
                 np.hstack((acc_train[:,None],acc_test[:,None])),
                 ['r-', 'b-'], ['train', 'test'],
-                'Epochs', 'accuracy', 'Accuracy during training',
+                'Epochs', 'accuracy', 'NN accuracy during training',
                 savefig = savefig, figname = filename)
 
         return acc_train, acc_test
@@ -349,29 +347,38 @@ class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
 
         return MSE_train, MSE_test
 
-class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
+class Neural_TensorFlow:
 
-    def __init__(self, layer_sizes=[50],
-                batch_size=100,
+    def __init__(self, layer_sizes=[50,20],
+                batch_size=32,
                 epochs=10,
                 optimizer="Adam",
                 loss="binary_crossentropy",
-                _lambda = 0.1,
-                activation_function = 'relu'):
+                alpha = 0.0,
+                activation_function = 'relu',
+                ):
         self.layer_sizes = layer_sizes
         self.batch_size = batch_size
         self.epochs = epochs
         self.optimizer = optimizer
         self.loss = loss
-        self._lambda = _lambda
+        self.alpha = alpha
         self.activation_function = activation_function
+
+    def get_params(self, deep=True):
+        return {k: v for k, v in self.__dict__.items() if not callable(v)}
+
+    def set_params(self, **parameters):
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
 
     def build_network(self, X, y):
         model = Sequential()
-        model.add(BatchNormalization())
+        #model.add(BatchNormalization())
         for layer_size in self.layer_sizes:
-            model.add(Dense(layer_size, activation=self.activation_function,kernel_regularizer=regularizers.l2(self._lambda)))
-        model.add(Dense(2, activation='softmax'))
+            model.add(Dense(layer_size, activation=self.activation_function,kernel_regularizer=regularizers.l2(self.alpha)))
+        model.add(Dense(1, activation='sigmoid'))
         model.compile(loss=self.loss,
                       optimizer=self.optimizer,
                       metrics=['accuracy'])
@@ -381,17 +388,22 @@ class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
         self.model = self.build_network(X, y)
         self.model.fit(X, y, epochs=self.epochs, batch_size=self.batch_size, verbose=0)
 
+    #def predict(self, Xtest):
+    #    return self.model.predict(Xtest)
+
     def predict(self, Xtest):
+        return self.model.predict_classes(Xtest)
+
+    def predict_proba(self, Xtest):
         return self.model.predict(Xtest)
 
-    def predict_classes(self, Xtest):
-        return self.model.predict_classes(Xtest)
+    #def predict_classes(self, Xtest):
+    #    return self.model.predict_classes(Xtest)
 
     def accuracyscore(self, Xtest, ytest):
         return self.model.evaluate(Xtest, ytest)
         print(accuracy)
 
-##############################
 ######## LOGISTIC REGRESSION
 
 class logReg_scikit:
@@ -436,7 +448,7 @@ class logisticRegression(BaseEstimator, ClassifierMixin):
     def train_track_test(self, X, y, X_test, y_test, plot = False, savefig = False, filename = ''):
         _lambda = self._lambda; eta = self.eta
         X = np.hstack((np.ones(X.shape[0])[:,None], X))
-        X_test = np.hstack((np.ones(X_test.shape[0])[:,None], X))
+        X_test = np.hstack((np.ones(X_test.shape[0])[:,None], X_test))
         self.beta = np.zeros(X.shape[1])[:,None]
         n = X.shape[0]
         cross_entropy_train = np.zeros(self.max_iter)
@@ -453,7 +465,7 @@ class logisticRegression(BaseEstimator, ClassifierMixin):
             plot_several(np.repeat(np.arange(self.max_iter)[:,None], 2, axis=1),
                 np.hstack((cross_entropy_train[:,None],cross_entropy_test[:,None])),
                 ['r-', 'b-'], ['train', 'test'],
-                'iterations', 'cross entropy', 'Cross entropy during training',
+                'iterations', 'cross entropy', 'Logistic Regression Learning',
                 savefig = savefig, figname = filename)
 
     def get_proba(self, X):
@@ -466,20 +478,3 @@ class logisticRegression(BaseEstimator, ClassifierMixin):
         y_pred_outcome = np.zeros(y_pred.shape)
         y_pred_outcome[y_pred>=0.5] = 1
         return y_pred_outcome
-
-"""
-class logReg:
-    def __init__(self, _lambda, alpha):
-        self._lambda = _lambda
-        self.alpha = alpha
-    def build_model(self):
-        model =
-        return model
-    def fit(self, X, y):
-        self.model = self.build_model()
-        self.model.fit(X, y)
-    def get_proba(self, X):
-        return
-    def predict(self, X):
-        return
-"""

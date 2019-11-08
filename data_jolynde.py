@@ -98,8 +98,8 @@ sc = StandardScaler()
 Xtrain = sc.fit_transform(Xtrain)
 Xtest = sc.transform(Xtest)
 
-# PCA
 '''
+# PCA
 pca = PCA(.97)  #Aim to keep 97% of variance and let algorithm find the appropriate number of principal components-
 pca.fit(Xtrain)
 print(pca.n_components_)
@@ -115,15 +115,15 @@ for percento in percento_range:
     pca.fit(Xtrain)
     n_comp[i] = pca.n_components_
     i = i+1
-plot_several(np.hstack((n_comp[:,None],n_comp[:,None])), np.hstack((percento_range[:,None],percento_range[-1-2]*np.ones(len(percento_range))[:,None])), ['r-', 'g-'], ['Train', '97% variance'], 'Epochs', 'Loss', 'Training loss', savefig = False, figname = '')
+plot_several(np.hstack((n_comp[:,None],n_comp[:,None])), 100*np.hstack((percento_range[:,None],percento_range[-1-2]*np.ones(len(percento_range))[:,None])), ['r-', 'g-'], ['Variance', '97% variance'], 'Number of principal components', 'Variance (%)', 'Number of principal components vs variance covered', savefig = True, figname = 'PCA_analysis')
 '''
 
 #Our NN single test
-nnTest = classes_jolynde.NeuralNetwork(n_hidden_neurons=(50,20), activation_function='sigmoid', lmbd=0.1, epochs=40, batch_size=64, eta=0.005)
+nnTest = classes_jolynde.NeuralNetwork(n_hidden_neurons=(50,20), activation_function='sigmoid', lmbd=0.1, epochs=20, batch_size=64, eta=0.005)
 history = nnTest.fit(Xtrain, Y_train_onehot, X_test = Xtest, y_test = Y_test_onehot, plot_learning=True)
 
 #Keras/TensorFlow single test
-nn_keras = build_network(layer_sizes=[100,30], alpha=0.1, activation_function='relu')
+nn_keras = build_network(layer_sizes=[50,20], alpha=0.1, activation_function='relu')
 nn_keras.fit(Xtrain, Y_train_onehot, validation_data = (Xtest, Y_test_onehot), epochs = 80)
 plot_several(np.repeat(np.arange(len(nn_keras.history.history['loss']))[:,None]+1, 2, axis=1), np.hstack((np.asarray(nn_keras.history.history['loss'])[:,None],np.asarray(nn_keras.history.history['val_loss'])[:,None])), ['r-', 'b-'], ['Train', 'Test'], 'Epochs', 'Loss', 'Training loss', savefig = False, figname = '')
 
@@ -154,8 +154,6 @@ print('Area ratio: %g' % area_ratio_nn_Tensor)
 print('Confusion matrix for TensorFlow neural network:')
 conf = confusion_matrix(ytest, nnKerasBest.model.predict_classes(Xtest))
 print(conf)
-
-pdb.set_trace()
 
 #GridSearchCV on our own neural network
 parameters = {'n_hidden_neurons':((10,),(50,),(50,20)), 'activation_function':['sigmoid', 'relu'], 'lmbd':[0, 0.01, 0.03, 0.1, 0.3], 'epochs':[10,30,60]}
