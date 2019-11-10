@@ -15,9 +15,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score
 from sklearn.utils import class_weight
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, cross_val_score, KFold
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 import matplotlib.pyplot as plt
@@ -25,18 +24,17 @@ import matplotlib.patches
 
 from project2_functions import *
 
-from keras.models import Model
-from keras.models import Sequential
+import tensorflow as tf
+
+from keras.models import Model, Sequential
 from keras.layers import Dense, Dropout, BatchNormalization
 from keras.optimizers import RMSprop
 from keras import regularizers
-import tensorflow as tf
 from keras.wrappers.scikit_learn import KerasRegressor
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import KFold
+
 
 class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
-
+    #inherits properties from Scitkit-learn objects to be able to perform gridSearchCV
     def __init__(self, n_hidden_neurons=50, activation_function='sigmoid', lmbd=0, epochs=150, batch_size=128, eta=0.1):
         self.lmbd = lmbd
         self.epochs = epochs
@@ -193,7 +191,7 @@ class NeuralNetworkRegressor(BaseEstimator, ClassifierMixin):
 
 
 class Neural_TensorFlow(BaseEstimator, ClassifierMixin):
-
+    #Class for constructing Keras/Tensorflow model
     def __init__(self, layer_sizes= [100,20],
                 batch_size=10,
                 epochs=150,

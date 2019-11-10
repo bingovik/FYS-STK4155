@@ -9,15 +9,12 @@ import os
 import keras
 from operator import add
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score, mean_squared_error, r2_score
 from sklearn.utils import class_weight
-from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 import matplotlib.pyplot as plt
@@ -25,8 +22,7 @@ import matplotlib.patches
 
 from project2_functions import *
 
-from keras.models import Model
-from keras.models import Sequential
+from keras.models import Model, Sequential
 from keras.layers import Dense, Dropout, BatchNormalization
 from keras.optimizers import RMSprop
 from keras import regularizers

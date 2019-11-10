@@ -1,16 +1,16 @@
 import pdb
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import auc, roc_curve
+from sklearn.metrics import auc, roc_curve, mean_squared_error, r2_score
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
+import tensorflow as tf
 from keras.models import Model
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, BatchNormalization
 from keras.optimizers import RMSprop
 from keras import regularizers
-import tensorflow as tf
 import seaborn as sns
 
 def build_network(layer_sizes=[50,20], n_outputs = 2,
@@ -219,7 +219,7 @@ def order_grid_search_data(param_grid, param_grid_obj, val_acc, column_param = '
     row_names = [w.replace('}', '') for w in row_names]
     return data_array, row_names, col_names
 
-def cross_validation(x, y, k):
+def cross_validation_OLS(x, y, k):
     n = len(x)
 
     indexes = np.arange(y.shape[0])
@@ -242,11 +242,11 @@ def cross_validation(x, y, k):
         ytilde = x_train @ beta
         ypredict = x_test @ beta
 
-        mse_train.append(MSE(y_train, ytilde))
-        mse_test.append(MSE(y_test, ypredict))
+        mse_train.append(mean_squared_error(y_train, ytilde))
+        mse_test.append(mean_squared_error(y_test, ypredict))
 
-        r2_train.append(R2(y_train, ytilde))
-        r2_test.append(R2(y_test, ypredict))
+        r2_train.append(r2_score(y_train, ytilde))
+        r2_test.append(r2_score(y_test, ypredict))
 
     r2_train = np.array(r2_train)
     r2_test = np.array(r2_test)

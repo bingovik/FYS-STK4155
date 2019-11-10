@@ -8,7 +8,7 @@ import pdb
 from sklearn.model_selection import train_test_split, cross_validate, ShuffleSplit, GridSearchCV, cross_val_score
 from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures, StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 import matplotlib.pyplot as plt
@@ -35,24 +35,22 @@ z = np.ravel(zz)
 z_true = np.ravel(zz_)
 X_orig = np.vstack((np.ravel(xx), np.ravel(yy))).T
 
-# Generate design matrix of polygons up to with chosen polynomial degree
+# Generate design matrix of polynomials up chosen polynomial degree
 poly = PolynomialFeatures(poly_degree) #inlude bias = false
 X = poly.fit_transform(X_orig)
 features = poly.get_feature_names(['x','y'])
 list_of_features.append(features)
 
-# Split and scale the data
+# Split and scale data
 seed = 0
 X_train, X_test, z_train, z_test, z_true_train, z_true_test = train_test_split(X,z,z_true, test_size = 0.2)
 sc = StandardScaler()
 X_train[:,1:] = sc.fit_transform(X_train[:,1:])
 X_test[:,1:] = sc.transform(X_test[:,1:])
-X[:,1:] = sc.transform(X[:,1:])
-
+#also scaling full set using training data means,stdevs.. Should be ok as the distributions should be very similar
+X[:,1:] = sc.transform(X[:,1:]) 
 
 #------------------------------------#
-
-
 
 # Set up initial parameters
 layer_size = (100,20)
@@ -62,51 +60,53 @@ eta = 0.01
 lambda_ = 0
 activation_function = 'relu'
 
+#create initial test models, own network and Keras/Tensorflow
 nn_keras = Neural_TensorFlow(layer_sizes = layer_size, activation_function = activation_function, alpha = lambda_, len_X = X_train)
 nn = NeuralNetworkRegressor(n_hidden_neurons = layer_size, activation_function = activation_function, eta = eta, epochs = epochs, batch_size=batch_size)
 
-# Make sure cv uses randomly splitted data
+# Make sure cross_validate uses randomly splitted data
 cv = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
 
+#Own network initial run with cross validation on whole data set
 cv_nn2 = cross_validate(nn, X, z[:,None], cv = cv, n_jobs = -1, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False)
 print('cv_scores_nn_test:', cv_nn2['test_neg_mean_squared_error'])
 print('MSE NN test: %0.5f (+/- %0.5f)' % (-cv_nn2['test_neg_mean_squared_error'].mean(), cv_nn2['test_neg_mean_squared_error'].std()*2))
 print('R2 NN test: %0.5f (+/- %0.5f)' % (cv_nn2['test_r2'].mean(), cv_nn2['test_r2'].std()*2))
-
+pdb.set_trace()
+#Keras/Tensorflow network initial run with cross validation on whole data set
 regressor_keras = KerasRegressor(build_fn=nn_keras.build_network, epochs=epochs, batch_size=batch_size, verbose = 0)
 cv_keras = cross_validate(regressor_keras, X, z, cv = cv, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False, verbose = 0, n_jobs = -1)
 print('cv_scores_keras:', cv_keras['test_neg_mean_squared_error'])
 print('MSE keras test: %0.5f (+/- %0.5f)' % (-np.mean(cv_keras['test_neg_mean_squared_error']), np.std(cv_keras['test_neg_mean_squared_error'])*2))
 print('R2 keras test: %0.5f (+/- %0.5f)' % (np.mean(cv_keras['test_r2']), np.std(cv_keras['test_r2'])*2))
 
-##### OLS REGRESSION
-# To compare the outcome
+# OLS REGRESSION (to compare with neural networks)
 k = 5
-mse_train, mse_test, r2_train, r2_test = cross_validation(X, z, k)
+mse_train, mse_test, r2_train, r2_test = cross_validation_OLS(X, z, k)
 print("cv_MSE_OLS test: %0.5f (+/- %0.5f)" % (mse_test.mean(), mse_test.std()*2))
 print("cv_R2_OLS test: %0.5f (+/- %0.5f)" % (r2_test.mean(), r2_test.std()*2))
 
-
+#run initial NN tests over different learning rates and regularization (with cross validation)
+eta_vals = [0.000001, 0.0001, 0.005, 0.01, 0.05]
+lmbd_vals = [0, 0.00001, 0.0001, 0.01, 0.1]
 scores = np.zeros((len(eta_vals), len(lmbd_vals)))
 test_MSE = np.zeros((len(eta_vals), len(lmbd_vals)))
 for i, eta in enumerate(eta_vals):
     for j, lmbd in enumerate(lmbd_vals):
-        DNN_ = NeuralNetworkRegressor(activation_function = activation_function, n_hidden_neurons = layer_size, epochs = epochs, batch_size = batch_size,
-                                         eta=eta, lmbd=lmbd)
+        DNN_ = NeuralNetworkRegressor(activation_function = activation_function, n_hidden_neurons = layer_size, epochs = epochs,
+            batch_size = batch_size, eta=eta, lmbd=lmbd)
         cv_DNN_ = cross_validate(DNN_, X, z[:,None], cv = cv, scoring = 'neg_mean_squared_error', return_train_score = False, n_jobs = -1)
         scores = -np.mean(cv_DNN_['test_score'])
-
         test_MSE[i][j] = -np.mean(cv_DNN_['test_score'])
         print("Learning rate = ", eta)
         print("Lambda = ", lmbd)
         print('Test MSE:', scores)
-
         #DNN_.fit(X_train, z_train[:,None], X_test = X_test, y_test = z_test[:,None])
         #scores = MSE(z_true_test[:,None], DNN_.predict(X_test))
-
         #train_MSE[i][j] = MSE(z_train[:,None], DNN_.predict(X_train))
         #test_true_MSE[i][j] = MSE(z_true_test[:,None], DNN_.predict(X_test))
 
+# plot heatmap of MSE from grid search over eta and lambda
 fig, ax = plt.subplots(figsize = (10, 10))
 sns.heatmap(test_MSE, annot=True, ax=ax, cmap="viridis", fmt = '.5g')
 ax.set_xticklabels(lmbd_vals)
@@ -117,6 +117,7 @@ ax.set_xlabel("$\lambda$")
 fig.savefig('./Images/NN_regression1.png')
 plt.show()
 
+#best learning rate and regularization parameter (hard coded)
 eta_n = 0.01
 lambda_n = 1e-5
 
@@ -178,8 +179,8 @@ print('R2 keras test: %0.5f (+/- %0.5f)' % (np.mean(cv_keras['test_r2']), np.std
 regressor_keras = KerasRegressor(build_fn=nn_keras1.build_network, epochs=epochs, batch_size=batch_size, verbose = 0)
 regressor_keras.fit(X_train, z_train)
 keras_pred = regressor_keras.predict(X_test)
-print('MSE_keras_test:', MSE(z_test, keras_pred))
-print('MSE_keras_true:', MSE(z_true_test, keras_pred))
+print('MSE_keras_test:', mean_squared_error(z_test, keras_pred))
+print('MSE_keras_true:', mean_squared_error(z_true_test, keras_pred))
 print('R2_keras_test:', R2(z_test, keras_pred))
 print('R2_keras_true:', R2(z_true_test, keras_pred))
 
@@ -188,14 +189,14 @@ nn1.fit(X_train, z_train[:,None], X_test = X_test, y_test = z_test[:,None])
 y_pred_nn1 = nn1.predict(X_test)
 mse_nn1 = mean_squared_error(z_test[:,None], y_pred_nn1)
 print('mse_nn_test:', mse_nn1)
-print('mse_nn_true:', MSE(z_true_test[:,None], y_pred_nn1))
-print('R2_nn_test:', R2(z_test[:,None], y_pred_nn1))
-print('R2_nn_true:', R2(z_true_test[:,None], y_pred_nn1))
+print('mse_nn_true:', mean_squared_error(z_true_test[:,None], y_pred_nn1))
+print('R2_nn_test:', r2_score(z_test[:,None], y_pred_nn1))
+print('R2_nn_true:', r2_score(z_true_test[:,None], y_pred_nn1))
 
 beta = np.linalg.inv(X_train.T.dot(X_train)).dot(X_train.T).dot(z_train)
 ztilde = X_train @ beta
 zpredict = X_test @ beta
-print("mse_ols_test:", MSE(z_test, zpredict))
-print("mse_ols_true:", MSE(z_true_test, zpredict))
-print("R2_ols_test:", R2(z_test, zpredict))
-print("R2_ols_test:", R2(z_true_test, zpredict))
+print("mse_ols_test:", mean_squared_error(z_test, zpredict))
+print("mse_ols_true:", mean_squared_error(z_true_test, zpredict))
+print("R2_ols_test:", r2_score(z_test, zpredict))
+print("R2_ols_test:", r2_score(z_true_test, zpredict))
