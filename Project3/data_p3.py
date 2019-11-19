@@ -2,26 +2,29 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
 
 from sklearn.model_selection import train_test_split, cross_validate, cross_val_score, ShuffleSplit, GridSearchCV
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, make_scorer, accuracy_score
 
-dfp = pd.read_csv('./Data/student-por.csv', sep = ';')
+from keras import regularizers
+from keras.models import Model, Sequential
+from keras.layers import Dense
+from keras.wrappers.scikit_learn import KerasClassifier
 
-dfp[['Medu', 'Fedu', 'traveltime', 'studytime', 'failures',
-   'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health']] = pd.Categorical(
-   dfp[['Medu', 'Fedu', 'traveltime', 'studytime', 'failures',
-   'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health']])
+
+dfr = pd.read_csv('./Data/winequality-red.csv', sep = ';')
+dfw = pd.read_csv('./Data/winequality-red.csv', sep = ';')
 
 # Create design matrix and target variable
-X = dfp.iloc[:, :30]
-y = dfp.iloc[:, 30:]
+X = dfr.iloc[:, :11].values
+y = dfr.iloc[:, 11].values
+y_c = dfr.iloc[:, 11]
 
 #One hot encoding, it automatically does the cat/object variables
-X_onehot = pd.get_dummies(X, drop_first=True)
 sc = StandardScaler()
 
 originalclass = []
@@ -31,44 +34,37 @@ def classification_report_with_accuracy_score(y_true, y_pred):
     predictedclass.extend(y_pred)
     return accuracy_score(y_true, y_pred) #return accuracy score
 
+cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
+
+
 #######
 #BINARY CLASSIFICATION
 #######
-
+"""
 y_b = y.copy()
-y_b.values[y_b.values <= 9] = 0
-y_b.values[y_b.values > 9] = 1
+y_b[y_b <= 5] = 0
+y_b[y_b > 5] = 1
 
-y1 = y_b.iloc[:,0]
-y2 = y_b.iloc[:,1]
-y3 = y_b.iloc[:,2]
-
-Xtrain, Xtest, y1train, y1test, y2train, y2test, y3train, y3test = train_test_split(X_onehot, y1, y2, y3, test_size = 0.2)
+Xtrain, Xtest, ytrain, ytest = train_test_split(X, y_b, test_size = 0.2)
 Xtrain = sc.fit_transform(Xtrain)
 Xtest = sc.transform(Xtest)
+X_ = sc.transform(X)
 
-logreg = LogisticRegression(solver = 'lbfgs').fit(Xtrain, y3train)
+logreg = LogisticRegression(solver = 'lbfgs').fit(Xtrain, ytrain)
 #pred = logreg.predict(Xtest)
 #print(classification_report(ytest_g3, pred))
 
-cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
-scores_logreg = cross_val_score(logreg, Xtrain, y3train, cv = cv, scoring = make_scorer(classification_report_with_accuracy_score))
+scores_logreg = cross_val_score(logreg, X_, y_b, cv = cv, scoring = make_scorer(classification_report_with_accuracy_score))
 
 print('Class_report LOGROG', classification_report(originalclass, predictedclass))
 print('CV accuracy score LOGREG: %0.3f (+/- %0.3f)' % (scores_logreg.mean(), scores_logreg.std()*2))
 
-
-from keras import regularizers
-from keras.models import Model, Sequential
-from keras.layers import Dense
-from keras.wrappers.scikit_learn import KerasClassifier
-
 def build_network(
-            layer_sizes = (256,128,64,32,16),
+            layer_sizes = (128,64,32,16),
             n_outputs = 1,
             batch_size = 64,
             epochs = 1000,
-            loss = 'binary_crossentropy',
+            loss = 'binary_crossentropy', #or accuracy
             alpha = 0,
             activation_function = 'relu',
             output_activation = 'sigmoid'
@@ -77,37 +73,110 @@ def build_network(
         if isinstance(layer_sizes, int):
             layer_sizes = [layer_sizes]
         for layer_size in layer_sizes:
-            model.add(Dense(layer_size, activation=activation_function,kernel_regularizer=regularizers.l2(alpha)))
+            model.add(Dense(layer_size, activation=activation_function, kernel_regularizer=regularizers.l2(alpha)))
         model.add(Dense(n_outputs, activation=output_activation))
         model.compile(loss=loss, optimizer='Adam', metrics=['accuracy'])
         return model
 
 NN = KerasClassifier(build_fn=build_network)
-scores_NN = cross_val_score(NN, Xtrain, y3train, cv = cv, scoring = make_scorer(classification_report_with_accuracy_score))
+scores_NN = cross_val_score(NN, X_, y_b, cv = cv)
+
+print(scores_NN)
 
 print('CV accuracy score NN: %0.3f (+/- %0.3f)' % (scores_NN.mean(), scores_NN.std()*2))
 
-#GridSearchCV on Tensorflow/Keras neural network
-parameters = {'layer_sizes':([256,128,64,32,16],[512,256,128,64,32,16],[1024,512,256,128]), 'activation_function':['sigmoid', 'relu'], 'alpha':[0, 0.01, 0.05, 0.1], 'epochs':[500,1000,1500]}
-nnClassifier = KerasClassifier(build_fn=build_network, n_outputs=1, output_activation = 'sigmoid', loss = "binary_crossentropy", verbose=0)
-clf = GridSearchCV(nnClassifier, parameters, scoring = 'accuracy', cv = 5, verbose = 8, n_jobs=-1)
-clf.fit(Xtrain, y3train)
-df_grid_nn_Keras = pd.DataFrame.from_dict(clf.cv_results_)
 
-#order data into matrix
-df_grid_nn_Keras, row_names_nn_Keras, col_names_nn_Keras = order_gridSearchCV_data(df_grid_nn_Keras, column_param = 'alpha')
-#fit best Tensorflow/Keras model
-print(clf.best_params_)
-nnKerasBest = KerasClassifier(build_fn=build_network, n_outputs=1, output_activation = 'sigmoid', loss="binary_crossentropy",verbose=0)
-nnKerasBest.set_params(**clf.best_params_)
-nnKerasBest.fit(Xtrain, y3train)
+model = Sequential()
+#model.add(Dense(128, activation='relu'))
+#model.add(Dense(64, activation='relu'))
+#model.add(Dense(32, activation='relu'))
+model.add(Dense(16, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+# Compile model
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# Fit the model
+history = model.fit(Xtrain, ytrain, validation_split=0.3, epochs=100, batch_size=16)
+# list all data in history
+print(history.history.keys())
+# summarize history for accuracy
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig("./Images/acc_hist.png")
+plt.show()
 
-#print metrics
-print('Classification report for TensorFlow neural network:')
-print(classification_report(y3test, nnKerasBest.model.predict_classes(Xtest)))
-print('Accuracy: %g' % accuracy_score(y3test,nnKerasBest.model.predict_classes(Xtest)))
-area_ratio_nn_Tensor = area_ratio(y3test, nnKerasBest.predict_proba(Xtest)[:,1], plot = True, title = 'Lift Keras/Tensorflow neural network', savefig=True, figname = 'Lift_Keras'+str(clf.best_params_)+fignamePostFix+'.png')
-print('Area ratio: %g' % area_ratio_nn_Tensor)
-print('Confusion matrix for TensorFlow neural network:')
-conf = confusion_matrix(y3test, nnKerasBest.model.predict_classes(Xtest))
-print(conf)
+plt.plot(history.history['loss'], label='train')
+plt.plot(history.history['val_loss'], label='test')
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig('./Images/loss_hist.png')
+plt.show()
+"""
+
+#######
+#CATEGORICAL CLASSIFICATION
+#######
+
+onehotencoder = OneHotEncoder(categories = "auto")
+
+y_c = pd.get_dummies(y_c).values
+
+Xtrain, Xtest, ytrain, ytest = train_test_split(X, y_c, test_size = 0.2)
+Xtrain = sc.fit_transform(Xtrain)
+Xtest = sc.transform(Xtest)
+X_ = sc.transform(X)
+
+def build_network(
+            layer_sizes = (128,64,32),
+            n_outputs = 6,
+            batch_size = 32,
+            epochs = 20,
+            loss = 'categorical_crossentropy', #or accuracy
+            alpha = 0,
+            activation_function = 'relu',
+            output_activation = 'softmax'
+            ):
+        model = Sequential()
+        if isinstance(layer_sizes, int):
+            layer_sizes = [layer_sizes]
+        for layer_size in layer_sizes:
+            model.add(Dense(layer_size, activation=activation_function, kernel_regularizer=regularizers.l2(alpha)))
+        model.add(Dense(n_outputs, activation=output_activation))
+        model.compile(loss=loss, optimizer='Adam', metrics=['accuracy'])
+        return model
+
+# Fit the model
+history = build_network().fit(Xtrain, ytrain, validation_split=0.3, epochs=100, batch_size=32)
+# list all data in history
+print(history.history.keys())
+# summarize history for accuracy
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig("./Images/acc_hist_cat.png")
+#plt.show()
+
+plt.plot(history.history['loss'], label='train')
+plt.plot(history.history['val_loss'], label='test')
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig('./Images/loss_hist_cat.png')
+#plt.show()
+
+#evaluate model
+NN = KerasClassifier(build_fn=build_network)
+scores_NN = cross_val_score(NN, X_, y_c, cv = cv)
+
+print(scores_NN)
+
+print('CV accuracy score NN: %0.3f (+/- %0.3f)' % (scores_NN.mean(), scores_NN.std()*2))
