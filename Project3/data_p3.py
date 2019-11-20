@@ -8,13 +8,14 @@ from sklearn.model_selection import train_test_split, cross_validate, cross_val_
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, make_scorer, accuracy_score
+from sklearn.metrics import classification_report, make_scorer, accuracy_score, confusion_matrix
 
 from keras import regularizers
 from keras.models import Model, Sequential
 from keras.layers import Dense
-from keras.wrappers.scikit_learn import KerasClassifier
+from keras.wrappers.scikit_learn import KerasClassifier, KerasRegressor
 
+from classes_p3 import *
 
 dfr = pd.read_csv('./Data/winequality-red.csv', sep = ';')
 dfw = pd.read_csv('./Data/winequality-red.csv', sep = ';')
@@ -124,34 +125,80 @@ plt.show()
 
 onehotencoder = OneHotEncoder(categories = "auto")
 
-y_c = pd.get_dummies(y_c).values
+#y_c = pd.get_dummies(y_c).values
 
 Xtrain, Xtest, ytrain, ytest = train_test_split(X, y_c, test_size = 0.2)
 Xtrain = sc.fit_transform(Xtrain)
 Xtest = sc.transform(Xtest)
 X_ = sc.transform(X)
 
-def build_network(
-            layer_sizes = (128,64,32),
-            n_outputs = 6,
-            batch_size = 32,
-            epochs = 20,
-            loss = 'categorical_crossentropy', #or accuracy
-            alpha = 0,
-            activation_function = 'relu',
-            output_activation = 'softmax'
-            ):
-        model = Sequential()
-        if isinstance(layer_sizes, int):
-            layer_sizes = [layer_sizes]
-        for layer_size in layer_sizes:
-            model.add(Dense(layer_size, activation=activation_function, kernel_regularizer=regularizers.l2(alpha)))
-        model.add(Dense(n_outputs, activation=output_activation))
-        model.compile(loss=loss, optimizer='Adam', metrics=['accuracy'])
-        return model
+NNc = NNclassifier()
 
+from sklearn import svm
+svclassifier = svm.SVC(kernel='rbf', gamma = 'auto')
+#svclassifier.fit(Xtrain, ytrain)
+#y_pred = svclassifier.predict(Xtest)
+
+#print(confusion_matrix(ytest,y_pred))
+#print(classification_report(ytest,y_pred))
+
+scores_SVMc = cross_val_score(svclassifier, X_, y, cv = cv)
+print(scores_SVMc)
+print('CV accuracy score SVMc: %0.3f (+/- %0.3f)' % (scores_SVMc.mean(), scores_SVMc.std()*2))
+
+
+C_vals = [1e-4, 1e-3, 1e-2, 1e-1, 1, 1e2, 1e3, 1e4] #[0.01, 0.1, 1, 10, 1e2, 1e4, 1e6]
+gamma_vals = [1e-4, 1e-3, 1e-2, 1e-1, 1, 1e2, 1e3, 1e4] #[10, 1, 0.1, 0.01, 0.0001, 1e-5, 1e-7]
+scores = np.zeros((len(C_vals), len(gamma_vals)))
+test_acc = np.zeros((len(C_vals), len(gamma_vals)))
+for i, gamma in enumerate(gamma_vals):
+    for j, C in enumerate(C_vals):
+        model = svm.SVC(kernel = 'rbf', C = C, gamma = gamma)
+        cv_ = cross_val_score(model, X_, y, cv = cv, n_jobs = -1, verbose = 1)
+        scores = np.mean(cv_)
+        test_acc[i][j] = np.mean(cv_)
+        print('C = ', C)
+        print('gamma = ', gamma)
+        print('Accuracy:', scores)
+
+# plot heatmap of MSE from grid search over eta and lambda
+fig, ax = plt.subplots(figsize = (10, 10))
+sns.heatmap(test_acc, annot=True, ax=ax, cmap="viridis", fmt = '.3g')
+ax.set_yticklabels(C_vals)
+ax.set_xticklabels(gamma_vals)
+ax.set_title("MSE test data")
+ax.set_xlabel("$\gamma$")
+ax.set_ylabel("C")
+fig.savefig('./Images/heatmap_svmclass1.png')
+plt.show()
+
+ngammas = 100
+gammas = np.logspace(-4, 4, ngammas)
+test_acc = np.zeros(ngammas)
+i = 0
+for gam in gammas:
+    model = svm.SVC(kernel='rbf', gamma = gam)
+    cv_ = cross_val_score(model, X_, y, cv = cv, n_jobs = -1, verbose = 0)
+    test_acc[i] = np.mean(cv_)
+    i += 1
+
+plt.figure()
+plt.plot(np.log10(gammas), test_acc)
+plt.xlabel('log10(gammas)')
+plt.ylabel('accuracy')
+plt.title('SVM classification for different gammas')
+plt.show()
+
+
+svclassifier = svm.SVC(kernel='rbf', C = 0.1, gamma = 0.1)
+scores_SVMc = cross_val_score(svclassifier, X_, y, cv = cv)
+print(scores_SVMc)
+print('CV accuracy score tuned SVMc: %0.3f (+/- %0.3f)' % (scores_SVMc.mean(), scores_SVMc.std()*2))
+
+
+"""
 # Fit the model
-history = build_network().fit(Xtrain, ytrain, validation_split=0.3, epochs=100, batch_size=32)
+history = NNc.build_network().fit(Xtrain, ytrain, validation_split=0.3, epochs=100, batch_size=32)
 # list all data in history
 print(history.history.keys())
 # summarize history for accuracy
@@ -162,7 +209,6 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.savefig("./Images/acc_hist_cat.png")
-#plt.show()
 
 plt.plot(history.history['loss'], label='train')
 plt.plot(history.history['val_loss'], label='test')
@@ -174,9 +220,77 @@ plt.savefig('./Images/loss_hist_cat.png')
 #plt.show()
 
 #evaluate model
-NN = KerasClassifier(build_fn=build_network)
-scores_NN = cross_val_score(NN, X_, y_c, cv = cv)
+NNc = KerasClassifier(build_fn=NNc.build_network)
+scores_NNc = cross_val_score(NNc, X_, y_c, cv = cv)
 
-print(scores_NN)
+print(scores_NNc)
 
-print('CV accuracy score NN: %0.3f (+/- %0.3f)' % (scores_NN.mean(), scores_NN.std()*2))
+print('CV accuracy score NNc: %0.3f (+/- %0.3f)' % (scores_NNc.mean(), scores_NNc.std()*2))
+
+
+#######
+# REGRESSION
+#######
+
+Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size = 0.2)
+Xtrain = sc.fit_transform(Xtrain)
+Xtest = sc.transform(Xtest)
+X_ = sc.transform(X)
+
+NNr_ = NNregressor(len_X = Xtrain)
+
+# Fit the model
+#history = NNr.build_network().fit(Xtrain, ytrain, validation_split=0.3, epochs=100, batch_size=32)
+
+NNr = KerasRegressor(build_fn=NNr_.build_network, verbose = 1)
+scores_NNr = cross_validate(NNr, X, y, cv = cv, scoring = ('neg_mean_squared_error', 'r2'), return_train_score = False, verbose = 1, n_jobs = -1)
+print('cv_scores_keras:', scores_NNr['test_neg_mean_squared_error'])
+print('MSE keras test: %0.5f (+/- %0.5f)' % (-np.mean(scores_NNr['test_neg_mean_squared_error']), np.std(scores_NNr['test_neg_mean_squared_error'])*2))
+print('R2 keras test: %0.5f (+/- %0.5f)' % (np.mean(scores_NNr['test_r2']), np.std(scores_NNr['test_r2'])*2))
+
+# Fit the model
+history = NNr_.build_network().fit(Xtrain, ytrain, validation_split=0.3, epochs=100, batch_size=32)
+# list all data in history
+print(history.history.keys())
+# summarize history for accuracy
+plt.plot(history.history['mean_squared_error'], label='train')
+plt.plot(history.history['val_mean_squared_error'], label='test')
+plt.title('model MSE')
+plt.ylabel('mse')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig("./Images/mse_hist_reg.png")
+plt.show()
+
+plt.plot(history.history['loss'], label='train')
+plt.plot(history.history['val_loss'], label='test')
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig('./Images/loss_hist_reg.png')
+plt.show()
+
+# Best regularization parameter
+lmbd_vals = [0, 0.00001, 0.0001, 0.01, 0.1]
+
+nlambdas = 10
+lambdas = np.logspace(-7, 2, nlambdas)
+
+test_MSE = np.zeros(nlambdas)
+
+i = 0
+for lmbd in lambdas:
+    DNN = NNregressor(alpha=lmbd, len_X = Xtrain)
+    DNN_ = KerasRegressor(build_fn=DNN.build_network)
+    cv_DNN_ = cross_validate(DNN_, X, y, cv = cv, scoring = 'neg_mean_squared_error', return_train_score = False, n_jobs = -1)
+    test_MSE[i] = np.mean(-cv_DNN_['test_score'])
+    i += 1
+
+plt.figure()
+plt.plot(np.log10(lambdas), test_MSE)
+plt.xlabel('log10(lambda)')
+plt.ylabel('MSE')
+plt.title('NN regression for different lambdas')
+plt.show()
+"""
