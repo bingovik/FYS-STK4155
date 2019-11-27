@@ -20,7 +20,7 @@ from sklearn import svm
 from classes_p3 import *
 
 dfr = pd.read_csv('./Data/winequality-red.csv', sep = ';')
-dfw = pd.read_csv('./Data/winequality-red.csv', sep = ';')
+dfw = pd.read_csv('./Data/winequality-white.csv', sep = ';')
 
 # Create design matrix and target variable
 X = dfr.iloc[:, :11].values
@@ -260,6 +260,20 @@ from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.metrics import mean_squared_error
 
 score = []
+reg = LogisticRegression(solver = 'lbfgs', max_iter = 10000, multi_class = 'auto')
+
+for i in range(100):
+    Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size = 0.2) #, random_state = 0)
+    reg.fit(Xtrain, ytrain)
+    ypred = reg.predict(Xtest)
+    print(i)
+    score.append(accuracy_score(ytest, ypred))
+
+sns.distplot(score, label = 'logreg')
+plt.show()
+
+"""
+score = []
 reg = Ridge(alpha = 0.7)
 
 for i in range(1000):
@@ -285,7 +299,7 @@ sns.distplot(score, label = 'svm')
 plt.legend()
 plt.show()
 
-
+"""
 """
 cv_reg = cross_validate(reg, X_, y, cv = cv, n_jobs = -1, scoring = scoring, return_train_score = False)
 
