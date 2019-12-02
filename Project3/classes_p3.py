@@ -8,6 +8,25 @@ from keras.models import Model, Sequential
 from keras.layers import Dense
 from keras import regularizers
 
+def build_network(layer_sizes=[128, 64, 32],
+                batch_size=32,
+                epochs=20,
+                optimizer="Adam",
+                loss="categorical_crossentropy",
+                alpha = 10e-4,
+                activation_function = 'relu',
+                output_activation = 'softmax'
+                ):
+        model = Sequential()
+        #model.add(BatchNormalization())
+        if isinstance(layer_sizes, int):
+            layer_sizes = [layer_sizes]
+        for layer_size in layer_sizes:
+            model.add(Dense(layer_size, activation=activation_function,kernel_regularizer=regularizers.l2(alpha)))
+        model.add(Dense(6, activation=output_activation))
+        model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
+        return model
+
 class NNclassifier():
     def __init__(self, layer_sizes= [128,64,32],
                 batch_size=32,
@@ -32,7 +51,7 @@ class NNclassifier():
         #if isinstance(layer_sizes, int):
         #    layer_sizes = [layer_sizes]
         for layer_size in self.layer_sizes:
-            model.add(Dense(layer_size, activation=self.activation_function, kernel_regularizer=regularizers.l2(self.alpha)))
+            model.add(Dense(layer_size, activation = self.activation_function, kernel_regularizer=regularizers.l2(self.alpha)))
         model.add(Dense(6, activation = self.output_activation))
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics = ['accuracy'])
         return model
