@@ -1,3 +1,6 @@
+from warnings import simplefilter
+simplefilter(action = 'ignore', category = FutureWarning)
+
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -8,24 +11,24 @@ from keras.models import Model, Sequential
 from keras.layers import Dense
 from keras import regularizers
 
-def build_network(layer_sizes=[128, 64, 32],
+def build_network(layer_sizes=[128, 64, 32], n_outputs = 9,
                 batch_size=32,
                 epochs=20,
                 optimizer="Adam",
                 loss="categorical_crossentropy",
                 alpha = 10e-4,
                 activation_function = 'relu',
-                output_activation = 'softmax'
+                output_activation = 'softmax',
                 ):
         model = Sequential()
-        #model.add(BatchNormalization())
         if isinstance(layer_sizes, int):
             layer_sizes = [layer_sizes]
         for layer_size in layer_sizes:
             model.add(Dense(layer_size, activation=activation_function,kernel_regularizer=regularizers.l2(alpha)))
-        model.add(Dense(6, activation=output_activation))
+        model.add(Dense(n_outputs, activation=output_activation))
         model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
         return model
+
 
 class NNclassifier():
     def __init__(self, layer_sizes= [128,64,32],
@@ -52,16 +55,16 @@ class NNclassifier():
         #    layer_sizes = [layer_sizes]
         for layer_size in self.layer_sizes:
             model.add(Dense(layer_size, activation = self.activation_function, kernel_regularizer=regularizers.l2(self.alpha)))
-        model.add(Dense(6, activation = self.output_activation))
+        model.add(Dense(9, activation = self.output_activation))
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics = ['accuracy'])
         return model
 
     def fit(self, X, y):
-        self.model = self.build_network(X, y)
+        self.model = self.build_network()
         self.model.fit(X, y, epochs=self.epochs, batch_size=self.batch_size, verbose=1)
 
     def predict(self, Xtest):
-        return self.model.predict(Xtest)
+        return self.model.predict_classes(Xtest)
 
     def predict_classes(self, Xtest):
         return self.model.predict_classes(Xtest)
@@ -110,7 +113,7 @@ class NNregressor():
         return model
 
     def fit(self, X, y):
-        self.model = self.build_network(X, y)
+        self.model = self.build_network()
         self.model.fit(X, y, epochs=self.epochs, batch_size=self.batch_size, verbose=0)
 
     def predict(self, Xtest):
