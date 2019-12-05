@@ -30,7 +30,7 @@ import matplotlib.patches
 
 from project3_functions import *
 
-wine_type = 'white' #red or white
+wine_type = 'red' #red or white
 savefigs = True
 k = 5 #number of k-fold splits
 
@@ -38,13 +38,15 @@ k = 5 #number of k-fold splits
 df = pd.read_csv('Data/winequality-' + wine_type + '.csv', sep=';',header=0)
 
 #Histogram of numeric features
-histplot = df.hist()
+fig, ax = plt.subplots()
+histplot = df.hist(ax = ax)
+plt.savefig('Images/feature_hist_' + wine_type + '.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 n_features = df.shape[1]
 
 #Plot correlation matrix
-heatmap(df.corr(), 'Feature correlation matrix', 'Features', 'Features', df.columns.tolist(), df.columns.tolist(), True, savefig = savefigs, figname = 'Images/corr_matrix_' + wine_type + '.png')
+heatmap(df.corr(), 'Feature correlation matrix, ' + wine_type, 'Features', 'Features', df.columns.tolist(), df.columns.tolist(), True, savefig = savefigs, figname = 'Images/corr_matrix_' + wine_type + '.png')
 
 feature_list = list(df.columns[df.columns != 'quality'])
 
@@ -81,7 +83,7 @@ grid_nn_Keras_classifier, row_names_nn_Keras_classifier, col_names_nn_Keras_clas
 print('Neural network classifier accuracy (CV): %g +-%g' % (df_grid_nn_Keras_classifier.mean_test_score.max(),2*np.mean(df_grid_nn_Keras_classifier.std_test_score[df_grid_nn_Keras_classifier.mean_test_score == df_grid_nn_Keras_classifier.mean_test_score.max()])))
 
 #plot heatmap of results
-heatmap(grid_nn_Keras_classifier, 'Neural network classifier accuracy (CV)', '\u03BB', 'parameters', col_names_nn_Keras, row_names_nn_Keras, True, savefig = True, figname = 'Images/NN_clas_accuracy' + wine_type + '.png')
+heatmap(grid_nn_Keras_classifier, 'Neural network classifier accuracy (CV), '+ wine_type, '\u03BB', 'parameters', col_names_nn_Keras, row_names_nn_Keras, True, savefig = True, figname = 'Images/NN_clas_accuracy' + wine_type + '.png')
 
 #refit best NN classifier
 print(clf.best_params_)
@@ -90,7 +92,7 @@ nnKerasBest.set_params(**clf.best_params_)
 hist = nnKerasBest.fit(Xtrain, ytrain_onehot, validation_data=(Xtest,ytest_onehot))
 print('Neural network classifier accuracy train: %g' % accuracy_score(ytrain,nnKerasBest.predict(Xtrain)))
 print('Neural network classifier accuracy test: %g' % accuracy_score(ytest,nnKerasBest.predict(Xtest)))
-
+'''
 #XGBoost regressor grid search
 parameters = {'eta': [0.2,0.3,0.4,1], 'gamma':[0,0.1,0.2,0.3,0.4,0.5], 'max_depth':[6,7,8,9,10,11]}
 XGBoost_regressor = XGBRegressor(objective = 'reg:squarederror')
@@ -107,12 +109,12 @@ print('XGBoost regressor CV validation MAD: %g +-%g' % (df_grid_XGBoost_regresso
 print('XGBoost regressor CV validation accuracy: %g +-%g' % (df_grid_XGBoost_regressor.mean_test_accuracy.max(),2*np.mean(df_grid_XGBoost_regressor.std_test_accuracy[df_grid_XGBoost_regressor.mean_test_accuracy == df_grid_XGBoost_regressor.mean_test_accuracy.max()])))
 
 #plot heatmap of results
-heatmap(-grid_XGBoost_regressor_MSE, 'XGboost regressor MSE (CV)', 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_MSE_CV_' + wine_type + '.png')
-heatmap(grid_XGBoost_regressor_MAD, 'XGboost regressor MAD (CV)', 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_MAD' + wine_type + '.png')
-heatmap(grid_XGBoost_regressor_accuracy, 'XGboost regressor accuracy (CV)', 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_accuracy' + wine_type + '.png')
+heatmap(-grid_XGBoost_regressor_MSE, 'XGboost regressor MSE (CV), '+ wine_type, 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_MSE_CV_' + wine_type + '.png')
+heatmap(grid_XGBoost_regressor_MAD, 'XGboost regressor MAD (CV), '+ wine_type, 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_MAD' + wine_type + '.png')
+heatmap(grid_XGBoost_regressor_accuracy, 'XGboost regressor accuracy (CV), '+ wine_type, 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_accuracy' + wine_type + '.png')
 
 #Best XGboost regressor
-XGBoost_regressor = XGBRegressor(max_depth = 10, gamma = 0, objective = 'reg:squarederror') #best with random seed for train/test spilt = 0
+XGBoost_regressor = XGBRegressor(**clf.best_params_, objective = 'reg:squarederror') #best with random seed for train/test spilt = 0
 XGBoost_regressor.fit(Xtrain,ytrain)
 print('XGboost regressor MSE train: %g' % mean_squared_error(ytrain,XGBoost_regressor.predict(Xtrain)))
 print('XGboost regressor MSE test: %g' % mean_squared_error(ytest,XGBoost_regressor.predict(Xtest)))
@@ -133,14 +135,14 @@ grid_XGBoost_classifier, row_names_XGBoost_classifier, col_names_XGBoost_classif
 print('XGBoost classifier CV validation accuracy: %g +-%g' % (df_grid_XGBoost_classifier.mean_test_score.max(),2*np.mean(df_grid_XGBoost_classifier.std_test_score[df_grid_XGBoost_classifier.mean_test_score == df_grid_XGBoost_classifier.mean_test_score.max()])))
 
 #plot heatmap of results
-heatmap(grid_XGBoost_classifier, 'XGboost classifier (CV)', 'max_depth', 'parameters', col_names_XGBoost_classifier, row_names_XGBoost_classifier, True, savefig = savefigs, figname = 'Images/XGBoost_clas_accuracy_CV_' + wine_type + '.png')
+heatmap(grid_XGBoost_classifier, 'XGboost classifier (CV), '+ wine_type, 'max_depth', 'parameters', col_names_XGBoost_classifier, row_names_XGBoost_classifier, True, savefig = savefigs, figname = 'Images/XGBoost_clas_accuracy_CV_' + wine_type + '.png')
 
 #Best XGboost classifier
-XGBoost_classifier = XGBClassifier(max_depth = 11, gamma = 0.1) #best with random seed for train/test spilt = 1
+XGBoost_classifier = XGBClassifier(**clf.best_params_) #best with random seed for train/test spilt = 1
 XGBoost_classifier.fit(Xtrain,ytrain.ravel())
 print('XGboost classifier accuracy train: %g' % accuracy_score(ytrain,XGBoost_classifier.predict(Xtrain)))
 print('XGboost classifier accuracy test: %g' % accuracy_score(ytest,XGBoost_classifier.predict(Xtest)))
-'''
+
 #Ridge regression grid search
 parameters = {'alpha':np.logspace(-1,2.5,15)}
 Ridge_regression = Ridge()
@@ -149,9 +151,9 @@ clf.fit(Xtrain,ytrain)
 df_grid_Ridge_regression = pd.DataFrame.from_dict(clf.cv_results_)
 
 #plot heatmap of results
-heatmap(-df_grid_Ridge_regression['mean_test_MSE'].to_numpy()[:,None], 'Ridge MSE (CV)', '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_MSE_CV_' + wine_type + '.png')
-heatmap(df_grid_Ridge_regression['mean_test_MAD'].to_numpy()[:,None], 'Ridge MAD (CV)', '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_MAD_CV_' + wine_type + '.png')
-heatmap(df_grid_Ridge_regression['mean_test_accuracy'].to_numpy()[:,None], 'Ridge accuracy (CV)', '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_accuracy_CV_' + wine_type + '.png')
+heatmap(-df_grid_Ridge_regression['mean_test_MSE'].to_numpy()[:,None], 'Ridge MSE (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_MSE_CV_' + wine_type + '.png')
+heatmap(df_grid_Ridge_regression['mean_test_MAD'].to_numpy()[:,None], 'Ridge MAD (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_MAD_CV_' + wine_type + '.png')
+heatmap(df_grid_Ridge_regression['mean_test_accuracy'].to_numpy()[:,None], 'Ridge accuracy (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_accuracy_CV_' + wine_type + '.png')
 print('Ridge regression CV validation MSE: %g +-%g' % (-df_grid_Ridge_regression.mean_test_MSE.max(),2*np.mean(df_grid_Ridge_regression.std_test_MSE[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
 print('Ridge regression CV validation MAD: %g +-%g' % (df_grid_Ridge_regression.mean_test_MAD.min(),2*np.mean(df_grid_Ridge_regression.std_test_MAD[df_grid_Ridge_regression.mean_test_MAD == df_grid_Ridge_regression.mean_test_MAD.min()])))
 print('Ridge regression CV validation accuracy: %g +-%g' % (df_grid_Ridge_regression.mean_test_accuracy.max(),2*np.mean(df_grid_Ridge_regression.std_test_accuracy[df_grid_Ridge_regression.mean_test_accuracy == df_grid_Ridge_regression.mean_test_accuracy.max()])))
@@ -187,12 +189,12 @@ print('Random forest regression CV validation MAD: %g +-%g' % (df_grid_rf_regres
 print('Random forest regression CV validation accuracy: %g +-%g' % (df_grid_rf_regressor.mean_test_accuracy.max(),2*np.mean(df_grid_rf_regressor.std_test_accuracy[df_grid_rf_regressor.mean_test_accuracy == df_grid_rf_regressor.mean_test_accuracy.max()])))
 
 #plot heatmap of results
-heatmap(-grid_rf_regressor_MSE, 'Random forest MSE (CV)', 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_MSE_CV_' + wine_type + '.png')
-heatmap(grid_rf_regressor_MAD, 'Random forest MAD (CV)', 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_MAD_CV_' + wine_type + '.png')
-heatmap(grid_rf_regressor_accuracy, 'Random forest accuracy (CV)', 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_accuracy_CV_' + wine_type + '.png')
+heatmap(-grid_rf_regressor_MSE, 'Random forest MSE (CV), '+ wine_type, 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_MSE_CV_' + wine_type + '.png')
+heatmap(grid_rf_regressor_MAD, 'Random forest MAD (CV), '+ wine_type, 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_MAD_CV_' + wine_type + '.png')
+heatmap(grid_rf_regressor_accuracy, 'Random forest accuracy (CV), '+ wine_type, 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_accuracy_CV_' + wine_type + '.png')
 
 #Best random forest regressor
-rf_regressor = RandomForestRegressor(n_estimators = 1000, random_state=42)
+rf_regressor = RandomForestRegressor(**clf.best_params_, random_state=42)
 rf_regressor.fit(Xtrain,ytrain.ravel())
 print('Random forest regressor MSE train: %g' % mean_squared_error(ytrain,rf_regressor.predict(Xtrain)))
 print('Random forest regressor MSE test: %g' % mean_squared_error(ytest,rf_regressor.predict(Xtest)))
@@ -200,7 +202,7 @@ print('Random forest regressor MAD train: %g' % MAD(ytrain,rf_regressor.predict(
 print('Random forest regressor MAD test: %g' % MAD(ytest,rf_regressor.predict(Xtest)))
 print('Random forest regressor accuracy train: %g' % accuracy_score(ytrain,np.rint(rf_regressor.predict(Xtrain))))
 print('Random forest regressor accuracy test: %g' % accuracy_score(ytest,np.rint(rf_regressor.predict(Xtest))))
-pdb.set_trace()
+
 #Random forest classifier grid search
 parameters = {'n_estimators':[100, 500, 1000], 'min_samples_leaf':[1,2,3], 'max_depth':(10, 11, 12, 13, None)}
 rf_classifier = RandomForestClassifier(random_state=42)
@@ -216,14 +218,12 @@ print('Random forest classifier CV validation accuracy: %g +-%g' % (df_grid_rf_c
 heatmap(grid_rf_classifier, 'Random forest (CV), ' + wine_type, 'min_samples_leaf', 'parameters', col_names_rf_classifier, row_names_rf_classifier, True, savefig = savefigs, figname = 'Images/RF_clas_CV_' + wine_type + '.png')
 
 #Best random forest classifier
-rf_classifier = RandomForestClassifier(n_estimators = 1000, random_state=42)
+rf_classifier = RandomForestClassifier(**clf.best_params_, random_state=42)
 rf_classifier.fit(Xtrain,ytrain.ravel())
 print('Random forest classifier accuracy train: %g' % accuracy_score(ytrain, rf_classifier.predict(Xtrain)))
 print('Random forest classifier accuracy test: %g' % accuracy_score(ytest, rf_classifier.predict(Xtest)))
 print('Features: %s' % feature_list)
 print('Random forest classifier feature importances: %s' % rf_classifier.feature_importances_)
-
-pdb.set_trace()
 
 #Simple decision tree for visualization
 dt_classifier = DecisionTreeClassifier(max_depth=3)
