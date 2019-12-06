@@ -1,5 +1,6 @@
 from warnings import simplefilter
 simplefilter(action='ignore', category=FutureWarning)
+
 import pandas as pd
 import os
 import numpy as np
@@ -18,7 +19,6 @@ from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score, make_scorer
-from sklearn.metrics import classification_report
 from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
@@ -30,14 +30,14 @@ import matplotlib.patches
 
 from project3_functions import *
 
-wine_type = 'red' #red or white
+wine_type = 'white' #red or white
 savefigs = True
 k = 5 #number of k-fold splits
 
 #Read student performance data from cvs to Pandas dataframe
 df = pd.read_csv('Data/winequality-' + wine_type + '.csv', sep=';',header=0)
 
-#Histogram of numeric features
+#Histogram of features
 fig, ax = plt.subplots()
 histplot = df.hist(ax = ax)
 plt.savefig('Images/feature_hist_' + wine_type + '.png', dpi=300, bbox_inches='tight')
@@ -54,10 +54,10 @@ feature_list = list(df.columns[df.columns != 'quality'])
 X = df.loc[:, df.columns != 'quality'].values #including previous grades G1, G2
 y = df.loc[:, df.columns == 'quality'].values
 
-# Target variable to one-hots
+# Target variable to categorical
 onehotencoder = OneHotEncoder(categories="auto")
-y_onehot = onehotencoder.fit_transform(y).toarray()
 y_onehot = to_categorical(y)
+#y_onehot = onehotencoder.fit_transform(y).toarray()
 
 # Split and scale the data
 seed = 1
@@ -69,12 +69,12 @@ Xtest = sc.transform(Xtest)
 
 #define score metrics for regression models
 reg_scoring = {'MSE': 'neg_mean_squared_error', 'MAD': make_scorer(MAD), 'accuracy': make_scorer(accuracy_from_regression)}
-'''
+
 #NN classifier grid search
 parameters = {'layer_sizes':([128,64],[256,128,64],[256,128,64,32]), 'alpha':[0, 0.00003, 0.0001, 0.0003, 0.001], 'epochs':[60,90,120,150]}
-nnClassifier = KerasClassifier(build_fn=build_network, n_outputs=ytrain_onehot.shape[1], output_activation = 'softmax', loss="sparse_categorical_crossentropy",verbose=8)
-clf = GridSearchCV(nnClassifier, parameters, scoring = 'accuracy', cv=5, verbose = 8, n_jobs=-1)
-pdb.set_trace()
+parameters = {'layer_sizes':([256,128,64],[256,128,64,32]), 'alpha':[0, 0.000001, 0.000003, 0.00001], 'epochs':[30,60,90,120,150]}
+nnClassifier = KerasClassifier(build_fn=build_network, n_outputs=ytrain_onehot.shape[1], output_activation = 'softmax', loss="sparse_categorical_crossentropy",verbose=0)
+clf = GridSearchCV(nnClassifier, parameters, scoring = 'accuracy', cv=5, verbose = 0, n_jobs=-1)
 clf.fit(Xtrain, ytrain)
 df_grid_nn_Keras_classifier = pd.DataFrame.from_dict(clf.cv_results_)
 
@@ -83,8 +83,8 @@ grid_nn_Keras_classifier, row_names_nn_Keras_classifier, col_names_nn_Keras_clas
 print('Neural network classifier accuracy (CV): %g +-%g' % (df_grid_nn_Keras_classifier.mean_test_score.max(),2*np.mean(df_grid_nn_Keras_classifier.std_test_score[df_grid_nn_Keras_classifier.mean_test_score == df_grid_nn_Keras_classifier.mean_test_score.max()])))
 
 #plot heatmap of results
-heatmap(grid_nn_Keras_classifier, 'Neural network classifier accuracy (CV), '+ wine_type, '\u03BB', 'parameters', col_names_nn_Keras, row_names_nn_Keras, True, savefig = True, figname = 'Images/NN_clas_accuracy' + wine_type + '.png')
-
+heatmap(grid_nn_Keras_classifier, 'Neural network classifier accuracy (CV), '+ wine_type, '\u03BB', 'parameters', col_names_nn_Keras_classifier, row_names_nn_Keras_classifier, True, savefig = True, figname = 'Images/NN_clas_accuracy_2' + wine_type + '.png')
+pdb.set_trace()
 #refit best NN classifier
 print(clf.best_params_)
 nnKerasBest = KerasClassifier(build_fn=build_network, n_outputs=y_onehot.shape[1], output_activation = 'softmax', loss="categorical_crossentropy",verbose=0)
@@ -92,7 +92,7 @@ nnKerasBest.set_params(**clf.best_params_)
 hist = nnKerasBest.fit(Xtrain, ytrain_onehot, validation_data=(Xtest,ytest_onehot))
 print('Neural network classifier accuracy train: %g' % accuracy_score(ytrain,nnKerasBest.predict(Xtrain)))
 print('Neural network classifier accuracy test: %g' % accuracy_score(ytest,nnKerasBest.predict(Xtest)))
-'''
+
 #XGBoost regressor grid search
 parameters = {'eta': [0.2,0.3,0.4,1], 'gamma':[0,0.1,0.2,0.3,0.4,0.5], 'max_depth':[6,7,8,9,10,11]}
 XGBoost_regressor = XGBRegressor(objective = 'reg:squarederror')
