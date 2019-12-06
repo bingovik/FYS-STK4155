@@ -99,7 +99,7 @@ for i, gamma in enumerate(gamma_vals):
         print('Accuracy:', scores)
 
 # plot heatmap of MSE from grid search over eta and lambda
-fig, ax = plt.subplots(figsize = (10, 10))
+fig, ax = plt.subplots(figsize = (8, 9))
 sns.heatmap(test_acc, annot=True, ax=ax, cmap="viridis", fmt = '.3g')
 ax.set_xticklabels(C_vals)
 ax.set_yticklabels(gamma_vals)
@@ -107,6 +107,7 @@ ax.set_title("Accuracy test data")
 ax.set_ylabel("$\gamma$")
 ax.set_xlabel("C")
 fig.savefig('./Images/heatmap_svmclass1.png')
+plt.clf()
 #plt.show()
 
 # Find the C and gamma value of the maximum accuracy
@@ -140,7 +141,7 @@ for c in cs:
     test_acc_c[i] = np.mean(cv_)
     i += 1
 
-fig, (ax1, ax2) = plt.subplots(1, 2, sharey = True)
+fig1, (ax1, ax2) = plt.subplots(1, 2, sharey = True)
 ax1.plot(np.log10(cs), test_acc_c, 'tab:orange')
 ax1.set_title('C parameter')
 ax1.set_ylabel('Accuracy score')
@@ -148,8 +149,10 @@ ax1.set_xlabel('log10(C)')
 ax2.plot(np.log10(gammas), test_acc_g, 'tab:green')
 ax2.set_title('$\gamma$ parameter')
 ax2.set_xlabel('log10($\gamma$)')
-fig.savefig('./Images/C_gamma_parameters')
+fig1.savefig('./Images/C_gamma_parameters')
+plt.clf()
 #plt.show()
+
 
 # Optimized model
 SVM_opt = svm.SVC(kernel='rbf', C = C_best, gamma = gamma_best)
@@ -176,6 +179,7 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.savefig("./Images/acc_hist_cat.png")
+plt.clf()
 
 plt.plot(history.history['loss'], label='train')
 plt.plot(history.history['val_loss'], label='test')
@@ -184,6 +188,7 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.savefig('./Images/loss_hist_cat.png')
+plt.clf()
 
 # Best regularization parameter
 nlambdas = 15
@@ -207,6 +212,7 @@ plt.xlabel('log10(lambda)')
 plt.ylabel('Accuracy')
 plt.title('NN classifier for different lambdas')
 plt.savefig('Images/NNc_lambdas')
+plt.clf()
 #plt.show()
 
 
@@ -244,7 +250,19 @@ pred_nn = NNc_b_.predict_classes(X_Tt)
 print('Accuracy NN test:', accuracy_score(y_T, pred_nn))
 print(classification_report(y_T, pred_nn))
 
-models = list([reg, SVM_opt, NNc_b_])
+#add here random Forest
+RFbest.fit(Xt, y_onehot)
+pred_rf = RFbest.predict_classes(X_Tt)
+print('Accuracy RF test:', accuracy_score(y_T, pred_rf))
+print(classification_report(y_T, pred_rf))
+
+#and xgboost
+XGbest.fit(Xt, y_onehot)
+pred_xg = XGbest.predict_classes(X_Tt)
+print('Accuracy XG test:', accuracy_score(y_T, pred_xg))
+print(classification_report(y_T, pred_xg))
+
+models = list([reg, SVM_opt, NNc_b_, #add RF, add XG])
 
 n_bootstraps = 100
 scores = np.empty((n_bootstraps, len(models)))
@@ -265,10 +283,13 @@ for m_int, m in enumerate(models):
 sns.distplot(scores[:,0], color="skyblue", label="Logistic Regression")
 sns.distplot(scores[:,1], color="red", label="SVM")
 sns.distplot(scores[:,2], color="green", label='Neural Network')
+sns.distplot(scores[:,3], color="green", label='Random Forest')
+sns.distplot(scores[:,4], color="green", label='XGBoost')
 plt.legend()
 plt.title('Accuracy scores on the test data')
 plt.xlabel('Accuracy')
 plt.savefig('Images/histplot_final_test (RS=2)')
+plt.clf()
 #plt.show()
 
 fig, ax = plt.subplots(nrows=3, sharex=True, figsize=(6,8))
@@ -285,6 +306,7 @@ sns.distplot(scores[:,2], ax=ax[2], color = 'green', bins = 20)
 ax[2].set_title('Neural network', fontsize = 10, y = 0.85)
 ax[2].set_xlabel('Accuracy', fontsize = 8)
 plt.savefig('Images/histplots_seperate_final_test (RS=2)')
+plt.clf()
 #plt.show()
 
 
@@ -354,7 +376,7 @@ for i, gamma in enumerate(gamma_vals):
         print('MSE:', scores)
 
 # plot heatmap of MSE from grid search over eta and lambda
-fig, ax = plt.subplots(figsize = (10, 10))
+fig, ax = plt.subplots(figsize = (8, 9))
 sns.heatmap(test_mse, annot=True, ax=ax, cmap="viridis", fmt = '.3g')
 ax.set_yticklabels(gamma_vals)
 ax.set_xticklabels(C_vals)
@@ -362,6 +384,7 @@ ax.set_title("MSE test data")
 ax.set_ylabel("$\gamma$")
 ax.set_xlabel("C")
 fig.savefig('./Images/heatmap_svmreg_test.png')
+plt.clf()
 #plt.show()
 
 # Find C and gamma with the minimum MSE value
@@ -405,6 +428,7 @@ print('---')
 # Fit the model
 history = NNr_.build_network().fit(Xtrain, ytrain, validation_split=0.3, epochs=100, batch_size=32)
 # summarize history for accuracy
+plt.figure(figsize = (6,4))
 plt.plot(history.history['mean_squared_error'], label='train')
 plt.plot(history.history['val_mean_squared_error'], label='test')
 plt.title('model MSE')
@@ -412,8 +436,10 @@ plt.ylabel('mse')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.savefig("./Images/mse_hist_reg.png")
+plt.clf()
 #plt.show()
 
+plt.figure(figsize = (6,4))
 plt.plot(history.history['loss'], label='train')
 plt.plot(history.history['val_loss'], label='test')
 plt.title('model loss')
@@ -421,6 +447,7 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.savefig('./Images/loss_hist_reg.png')
+plt.clf()
 #plt.show()
 
 # Best regularization parameter
@@ -446,6 +473,7 @@ plt.xlabel('log10(lambda)')
 plt.ylabel('MSE')
 plt.title('NN regression for different lambdas')
 plt.savefig('Images/nn_reg_lambda')
+plt.clf()
 #plt.show()
 
 # Grid search over different parameters, with the best alpha
@@ -472,14 +500,20 @@ print('-------------FINAL TEST------------')
 
 pred_OLS = OLS.fit(Xt, y).predict(X_Tt)
 print('MSE OLS test:', mean_squared_error(y_T, pred_OLS))
+print('Max prediction OLS:', pred_OLS.max())
+print('Min prediction OLS:', pred_OLS.min())
 
 pred_svm = SVMr_opt.fit(Xt, y).predict(X_Tt)
 #pred_svm = svm.predict(X_T)
 print('MSE SVM test:', mean_squared_error(y_T, pred_svm))
+print('Max prediction SVM:', pred_svm.max())
+print('Min prediction SVM:', pred_svm.min())
 
 NNr_b_.fit(Xt, y)
 pred_nnr = NNr_b_.predict(X_Tt)
 print('MSE NN test:', mean_squared_error(y_T, pred_nnr))
+print('Max prediction NN:', pred_nnr.max())
+print('Min prediction NN:', pred_nnr.min())
 
 models_reg = list([OLS, SVMr_opt, NNr_b_])
 
@@ -505,6 +539,7 @@ plt.title('MSE scores on the test data')
 plt.xlabel('MSE')
 plt.legend()
 plt.savefig('Images/histplot_final_test_reg (RS=2)')
+plt.clf()
 #plt.show()
 
 fig, ax = plt.subplots(nrows=3, sharex=True, figsize=(6,8))
@@ -515,11 +550,52 @@ ax[0].xaxis.set_tick_params(which='both', labelbottom=True)
 
 sns.distplot(scores_reg[:,1], ax=ax[1], color = 'red', bins = 20)
 ax[1].set_title('Support Vector Machine', fontsize = 10, y = 0.85)
-#plt.setp(ax=ax[1].get_xticklabels(), visible=True)
 ax[1].xaxis.set_tick_params(which='both', labelbottom=True)
 
 sns.distplot(scores_reg[:,2], ax=ax[2], color = 'green', bins = 20)
 ax[2].set_title('Neural network', fontsize = 10, y = 0.85)
 ax[2].set_xlabel('MSE', fontsize = 8)
 plt.savefig('Images/histplots_seperate_final_test_reg (RS=2)')
+plt.clf()
+#plt.show()
+
+scores_reg_mad = np.empty((n_bootstraps, len(models_reg)))
+
+for m_int, m in enumerate(models_reg):
+    mad = []
+    for i in range(n_bootstraps):
+        x_, y_ = resample(X_Tt, y_T, n_samples = len(X_T))
+        y_pred = m.predict(x_).ravel()
+        mad.append(MAD(y_, y_pred))
+
+        scores_reg_mad[i, m_int] = MAD(y_, y_pred)
+
+    print(m, 'MAD: %0.3f (+/- %0.3f)' % (np.mean(mad), np.std(mad)*2))
+
+#Get some plots with the distribution of the MSE
+sns.distplot(scores_reg_mad[:,0], color="skyblue", label="Logistic Regression")
+sns.distplot(scores_reg_mad[:,1], color="red", label="SVM")
+sns.distplot(scores_reg_mad[:,2], color="green", label='Neural Network')
+plt.title('MAD scores on the test data')
+plt.xlabel('MAD')
+plt.legend()
+plt.savefig('Images/histplot_final_test_reg_MAD (RS=2)')
+plt.clf()
+#plt.show()
+
+fig, ax = plt.subplots(nrows=3, sharex=True, figsize=(6,8))
+fig.suptitle('MAD score on the test data', fontsize = 15, y = 0.92)
+sns.distplot(scores_reg_mad[:,0], ax=ax[0], color = 'skyblue', bins = 20)
+ax[0].set_title('Logistic Regression', fontsize = 10, y = 0.85)
+ax[0].xaxis.set_tick_params(which='both', labelbottom=True)
+
+sns.distplot(scores_reg_mad[:,1], ax=ax[1], color = 'red', bins = 20)
+ax[1].set_title('Support Vector Machine', fontsize = 10, y = 0.85)
+ax[1].xaxis.set_tick_params(which='both', labelbottom=True)
+
+sns.distplot(scores_reg_mad[:,2], ax=ax[2], color = 'green', bins = 20)
+ax[2].set_title('Neural network', fontsize = 10, y = 0.85)
+ax[2].set_xlabel('MAD', fontsize = 8)
+plt.savefig('Images/histplots_seperate_final_test_reg_MAD (RS=2)')
+plt.clf()
 #plt.show()
