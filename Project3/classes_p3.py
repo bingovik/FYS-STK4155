@@ -11,7 +11,7 @@ from keras.models import Model, Sequential
 from keras.layers import Dense
 from keras import regularizers
 
-def build_network(layer_sizes=[128, 64, 32], n_outputs = 9,
+def build_network(layer_sizes=[128, 64, 32], n_outputs = 10,
                 batch_size=32,
                 epochs=20,
                 optimizer="Adam",
@@ -55,7 +55,7 @@ class NNclassifier():
         #    layer_sizes = [layer_sizes]
         for layer_size in self.layer_sizes:
             model.add(Dense(layer_size, activation = self.activation_function, kernel_regularizer=regularizers.l2(self.alpha)))
-        model.add(Dense(9, activation = self.output_activation))
+        model.add(Dense(10, activation = self.output_activation))
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics = ['accuracy'])
         return model
 
