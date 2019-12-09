@@ -6,17 +6,19 @@ import numpy as np
 import seaborn as sns
 import keras
 import tensorflow as tf
+import pdb
 
 from keras.models import Model, Sequential
 from keras.layers import Dense
 from keras import regularizers
 
-def build_network(layer_sizes=[128, 64, 32], n_outputs = 9,
+def build_network(layer_sizes=[128, 64, 32],
+                n_outputs = 2,
                 batch_size=32,
                 epochs=20,
                 optimizer="Adam",
                 loss="categorical_crossentropy",
-                alpha = 10e-4,
+                alpha = 0,
                 activation_function = 'relu',
                 output_activation = 'softmax',
                 ):
@@ -29,9 +31,9 @@ def build_network(layer_sizes=[128, 64, 32], n_outputs = 9,
         model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
         return model
 
-
 class NNclassifier():
     def __init__(self, layer_sizes= [128,64,32],
+                n_outputs=2,
                 batch_size=32,
                 epochs=20,
                 optimizer="Adam",
@@ -41,6 +43,7 @@ class NNclassifier():
                 output_activation = 'softmax'
                 ):
         self.layer_sizes = layer_sizes
+        self.n_outputs = n_outputs
         self.batch_size = batch_size
         self.epochs = epochs
         self.optimizer = optimizer
@@ -55,7 +58,7 @@ class NNclassifier():
         #    layer_sizes = [layer_sizes]
         for layer_size in self.layer_sizes:
             model.add(Dense(layer_size, activation = self.activation_function, kernel_regularizer=regularizers.l2(self.alpha)))
-        model.add(Dense(9, activation = self.output_activation))
+        model.add(Dense(self.n_outputs, activation = self.output_activation))
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics = ['accuracy'])
         return model
 
