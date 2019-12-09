@@ -28,9 +28,9 @@ dfr = pd.read_csv('./Data/winequality-red.csv', sep = ';')
 dfw = pd.read_csv('./Data/winequality-white.csv', sep = ';')
 
 # Create design matrix and target variable
-X = dfr.iloc[:, :11].values
-y = dfr.iloc[:, 11].values
-y_c = dfr.iloc[:, 11]
+X = dfw.iloc[:, :11].values
+y = dfw.iloc[:, 11].values
+y_c = dfw.iloc[:, 11]
 
 # Holdout data for final test
 X, X_T, y, y_T, y_c, y_c_T = train_test_split(X, y, y_c, test_size = 0.2, random_state = 2)
@@ -168,7 +168,7 @@ NNc_ = KerasClassifier(build_fn=NNc.build_network, verbose = 0)
 scores_NNc = cross_val_score(NNc_, X_, y_onehot, cv = cv, verbose = 0)
 #print(scores_NNc)
 print('CV accuracy score NNc: %0.3f (+/- %0.3f)' % (scores_NNc.mean(), scores_NNc.std()*2))
-
+"""
 # Find the number of epochs
 history = NNc.build_network().fit(Xtrain, ytrain_onehot, validation_split=0.3, epochs=100, batch_size=32)
 #print(history.history.keys())
@@ -189,7 +189,7 @@ plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.savefig('./Images/loss_hist_cat.png')
 plt.clf()
-
+"""
 # Best regularization parameter
 nlambdas = 15
 lambdas = np.logspace(-8, 2, nlambdas)
@@ -219,7 +219,7 @@ plt.clf()
 #Grid search over different parameters
 NNc = NNclassifier(alpha = lambda_best)
 
-parameters = {'layer_sizes':([128],[128,64],[256,128,64,32]), 'activation_function':['sigmoid','relu'], 'batch_size': [16,32,64]}
+parameters = {'layer_sizes':([128],[128,64],[256,128,64,32]), 'activation_function':['sigmoid','relu'], 'epochs': [20,50,100]}
 nnClassifier = KerasClassifier(build_fn=build_network, alpha = lambda_best, verbose=0)
 gs_nn = GridSearchCV(nnClassifier, parameters, cv=cv, verbose=0, n_jobs=-1)
 gs_nn.fit(Xtrain, ytrain_onehot)
@@ -250,19 +250,9 @@ pred_nn = NNc_b_.predict_classes(X_Tt)
 print('Accuracy NN test:', accuracy_score(y_T, pred_nn))
 print(classification_report(y_T, pred_nn))
 
-#add here random Forest
-RFbest.fit(Xt, y_onehot)
-pred_rf = RFbest.predict_classes(X_Tt)
-print('Accuracy RF test:', accuracy_score(y_T, pred_rf))
-print(classification_report(y_T, pred_rf))
+models = list([reg, SVM_opt, NNc_b_])
 
-#and xgboost
-XGbest.fit(Xt, y_onehot)
-pred_xg = XGbest.predict_classes(X_Tt)
-print('Accuracy XG test:', accuracy_score(y_T, pred_xg))
-print(classification_report(y_T, pred_xg))
-
-models = list([reg, SVM_opt, NNc_b_, #add RF, add XG])
+quit()
 
 n_bootstraps = 100
 scores = np.empty((n_bootstraps, len(models)))
@@ -283,8 +273,6 @@ for m_int, m in enumerate(models):
 sns.distplot(scores[:,0], color="skyblue", label="Logistic Regression")
 sns.distplot(scores[:,1], color="red", label="SVM")
 sns.distplot(scores[:,2], color="green", label='Neural Network')
-sns.distplot(scores[:,3], color="green", label='Random Forest')
-sns.distplot(scores[:,4], color="green", label='XGBoost')
 plt.legend()
 plt.title('Accuracy scores on the test data')
 plt.xlabel('Accuracy')
