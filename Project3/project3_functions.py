@@ -22,7 +22,8 @@ def accuracy_from_regression(y,y_pred):
 def MAD(y_true, y_pred):
     return np.mean(np.abs(y_true.ravel() - y_pred.ravel()))
 
-def build_network(layer_sizes=[50,20], n_outputs = 2,
+def build_network(layer_sizes=[50,20],
+                n_outputs = 2,
                 batch_size=32,
                 epochs=10,
                 optimizer="Adam",
@@ -37,7 +38,11 @@ def build_network(layer_sizes=[50,20], n_outputs = 2,
             layer_sizes = [layer_sizes]
         for layer_size in layer_sizes:
             model.add(Dense(layer_size, activation=activation_function,kernel_regularizer=regularizers.l2(alpha)))
-        model.add(Dense(n_outputs, activation=output_activation))
+        if output_activation != None:
+            model.add(Dense(n_outputs, activation=output_activation))
+        else:
+            model.add(Dense(n_outputs))
+
         model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
         return model
 
@@ -106,7 +111,7 @@ def categorical_cross_entropy(y_pred, y):
     categorical_cross_entropy = -(y.T@np.log(y_pred)+(1-y).T@np.log(1-y_pred))/n
     return categorical_cross_entropy[0][0]
 
-def cv(model, k, metric, X, y, X_test, y_test):
+def crossVal(model, k, metric, X, y, X_test, y_test):
     '''
     Performs k-fold cross validation on input design matrix x and target vector y.
     Predictions are also calculated for the separate test set (X_test, y_test) in
@@ -158,8 +163,8 @@ def plot_several(x_data, y_data, colors, labels, xlabel, ylabel, title, savefig 
     if savefig: plt.savefig(figname, dpi=300, bbox_inches='tight')
     plt.show()
 
-def heatmap(data, title, xlabel, ylabel, xticks, yticks, annotation, savefig = False, figname = ''):
-    ax = sns.heatmap(data, fmt = '.3f', annot = annotation, linewidth=0.5)
+def heatmap(data, title, xlabel, ylabel, xticks, yticks, annotation, format = '.3f', cmap = None, savefig = False, figname = ''):
+    ax = sns.heatmap(data, fmt = format, cmap=cmap, annot = annotation, linewidth=0.5)
     sns.set(font_scale=0.64)
     ax.set_title(title, fontsize = 11)
     ax.set_xlabel(xlabel, fontsize = 9)

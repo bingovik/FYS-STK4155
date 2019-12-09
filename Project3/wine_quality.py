@@ -9,7 +9,7 @@ import seaborn as sns
 import pdb
 import pydot
 
-from keras.wrappers.scikit_learn import KerasClassifier
+from keras.wrappers.scikit_learn import KerasClassifier, KerasRegressor
 from keras.utils import to_categorical
 
 from sklearn import svm
@@ -32,14 +32,14 @@ from matplotlib.colors import ListedColormap
 
 from project3_functions import *
 
-wine_type = 'red' #red or white
+wine_type = 'white' #red or white
 savefigs = True
 k = 5 #number of k-fold splits
 
-#Read student performance data from cvs to Pandas dataframe
+#read wine data from cvs to Pandas dataframe
 df = pd.read_csv('Data/winequality-' + wine_type + '.csv', sep=';',header=0)
 
-#Histogram of features
+#histogram of features
 fig, ax = plt.subplots()
 histplot = df.hist(ax = ax)
 plt.savefig('Images/feature_hist_' + wine_type + '.png', dpi=300, bbox_inches='tight')
@@ -74,7 +74,7 @@ reg_scoring = {'MSE': 'neg_mean_squared_error', 'MAD': make_scorer(MAD, greater_
 
 cv = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
 
-############ LOGISTIC REGRESSION ############
+############ Logistic regression ############
 print('-------------Logistic regression------------')
 reg = LogisticRegression(solver = 'lbfgs', max_iter = 10000, multi_class = 'auto')
 scores_logreg = cross_val_score(reg, Xtrain, ytrain.ravel(), cv = cv)
@@ -132,13 +132,15 @@ df_grid_rf_regressor = pd.DataFrame.from_dict(clf.cv_results_)
 grid_rf_regressor_MSE, row_names_rf_regressor, col_names_rf_regressor = order_gridSearchCV_data(df_grid_rf_regressor, column_param = 'min_samples_leaf', score = 'mean_test_MSE')
 grid_rf_regressor_MAD, _, _ = order_gridSearchCV_data(df_grid_rf_regressor, column_param = 'min_samples_leaf', score = 'mean_test_MAD')
 grid_rf_regressor_accuracy, _, _ = order_gridSearchCV_data(df_grid_rf_regressor, column_param = 'min_samples_leaf', score = 'mean_test_accuracy')
-print('Random forest regression CV validation MSE: %g +-%g' % (-df_grid_rf_regressor.mean_test_MSE.max(),2*np.mean(df_grid_rf_regressor.std_test_MSE[df_grid_rf_regressor.mean_test_MSE == df_grid_rf_regressor.mean_test_MSE.max()])))
-print('Random forest regression CV validation MAD: %g +-%g' % (df_grid_rf_regressor.mean_test_MAD.min(),2*np.mean(df_grid_rf_regressor.std_test_MAD[df_grid_rf_regressor.mean_test_MAD == df_grid_rf_regressor.mean_test_MAD.min()])))
-print('Random forest regression CV validation accuracy: %g +-%g' % (df_grid_rf_regressor.mean_test_accuracy.max(),2*np.mean(df_grid_rf_regressor.std_test_accuracy[df_grid_rf_regressor.mean_test_accuracy == df_grid_rf_regressor.mean_test_accuracy.max()])))
+
+#print cv results
+print('Random forest regressor CV best validation MSE: %g +-%g' % (-df_grid_rf_regressor.mean_test_MSE.max(),2*np.mean(df_grid_rf_regressor.std_test_MSE[df_grid_rf_regressor.mean_test_MSE == df_grid_rf_regressor.mean_test_MSE.max()])))
+print('Random forest regressor CV corresponding validation MAD: %g +-%g' % (-np.mean(df_grid_rf_regressor.mean_test_MAD[df_grid_rf_regressor.mean_test_MSE == df_grid_rf_regressor.mean_test_MSE.max()]),2*np.mean(df_grid_rf_regressor.std_test_MAD[df_grid_rf_regressor.mean_test_MSE == df_grid_rf_regressor.mean_test_MSE.max()])))
+print('Random forest regressor CV corresponding validation accuracy: %g +-%g' % (np.mean(df_grid_rf_regressor.mean_test_accuracy[df_grid_rf_regressor.mean_test_MSE == df_grid_rf_regressor.mean_test_MSE.max()]),2*np.mean(df_grid_rf_regressor.std_test_accuracy[df_grid_rf_regressor.mean_test_MSE == df_grid_rf_regressor.mean_test_MSE.max()])))
 
 #plot heatmap of results
 heatmap(-grid_rf_regressor_MSE, 'Random forest MSE (CV), '+ wine_type, 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_MSE_CV_' + wine_type + '.png')
-heatmap(grid_rf_regressor_MAD, 'Random forest MAD (CV), '+ wine_type, 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_MAD_CV_' + wine_type + '.png')
+heatmap(-grid_rf_regressor_MAD, 'Random forest MAD (CV), '+ wine_type, 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_MAD_CV_' + wine_type + '.png')
 heatmap(grid_rf_regressor_accuracy, 'Random forest accuracy (CV), '+ wine_type, 'min_samples_leaf', 'parameters', col_names_rf_regressor, row_names_rf_regressor, True, savefig = savefigs, figname = 'Images/RF_reg_accuracy_CV_' + wine_type + '.png')
 
 #Best random forest regressor
@@ -151,7 +153,7 @@ print('Random forest regressor MSE test: %g' % mean_squared_error(ytest,pred_rf_
 print('Random forest regressor MAD train: %g' % MAD(ytrain,pred_rf_regressor_train))
 print('Random forest regressor MAD test: %g' % MAD(ytest,pred_rf_regressor_test))
 print('Random forest regressor accuracy train: %g' % accuracy_score(ytrain,np.rint(pred_rf_regressor_train)))
-print('Random forest regressor accuracy test: %g' % accuracy_score(ytest,np.pred_rf_regressor_test))
+print('Random forest regressor accuracy test: %g' % accuracy_score(ytest,np.rint(pred_rf_regressor_test)))
 
 #confusion matrix
 heatmap(confusion_matrix(ytest,np.rint(pred_rf_regressor_test)),'Random forest regression confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/RF_reg_confusion_' + wine_type + '.png')
@@ -187,7 +189,7 @@ print('Neural network classifier accuracy test: %g' % accuracy_score(ytest,pred_
 
 #learning chart for best model (accuracy and loss) and confusion matrix
 plot_several(np.tile(np.arange(clf.best_params_['epochs'])[:,None],[1,2]), np.concatenate((np.reshape(hist.history['accuracy'],(clf.best_params_['epochs'],1)),np.reshape(hist.history['val_accuracy'],(clf.best_params_['epochs'],1))),axis=1), '', ['train','test'], 'epochs', 'accuracy', 'NN classifier learning, ' + wine_type, savefig = savefigs, figname = 'NN_clas_learning_acc' + wine_type + '.png')
-plot_several(np.tile(np.arange(clf.best_params_['epochs'])[:,None],[1,2]), np.concatenate((np.reshape(hist.history['loss'],(clf.best_params_['epochs'],1)),np.reshape(hist.history['val_loss'],(clf.best_params_['epochs'],1))),axis=1), '', ['train','test'], 'epochs', 'accuracy', 'NN classifier learning, ' + wine_type, savefig = savefigs, figname = 'NN_clas_learning_loss' + wine_type + '.png')
+plot_several(np.tile(np.arange(clf.best_params_['epochs'])[:,None],[1,2]), np.concatenate((np.reshape(hist.history['loss'],(clf.best_params_['epochs'],1)),np.reshape(hist.history['val_loss'],(clf.best_params_['epochs'],1))),axis=1), '', ['train','test'], 'epochs', 'loss', 'NN classifier learning, ' + wine_type, savefig = savefigs, figname = 'NN_clas_learning_loss' + wine_type + '.png')
 heatmap(confusion_matrix(ytest,pred_nnKerasBest_test),'NN classifier confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/NN_clas_confusion_' + wine_type + '.png')
 
 ############ Neural network regressor ############
@@ -195,8 +197,8 @@ print('-------------Neural network regressor------------')
 
 #NN regressor grid search
 parameters = {'layer_sizes':([128,64],[256,128,64],[256,128,64,32]), 'alpha':[0, 0.00001, 0.00003, 0.0001, 0.0003], 'epochs':[30,60,90,120]}
-nnRegressor = KerasRegressor(build_fn=build_network, n_outputs=ytrain_onehot.shape[1], output_activation = 'softmax', loss="sparse_categorical_crossentropy",verbose=0)
-clf = GridSearchCV(nnRegressor, parameters, scoring = reg_scoring, cv=5, verbose = 0, n_jobs=-1)
+nnRegressor = KerasRegressor(build_fn=build_network, n_outputs = 1, output_activation = None, loss="mean_squared_error",verbose=0)
+clf = GridSearchCV(nnRegressor, parameters, scoring = reg_scoring, refit = 'MSE', cv=5, verbose = 0, n_jobs=-1)
 clf.fit(Xtrain, ytrain)
 df_grid_nn_Keras_regressor = pd.DataFrame.from_dict(clf.cv_results_)
 
@@ -206,20 +208,20 @@ grid_nn_Keras_regressor_MAD, _, _ = order_gridSearchCV_data(df_grid_nn_Keras_reg
 grid_nn_Keras_regressor_accuracy, _, _ = order_gridSearchCV_data(df_grid_nn_Keras_regressor, column_param = 'alpha', score = 'mean_test_accuracy')
 
 #print cv results
-print('Neural network regressor CV validation MSE: %g +-%g' % (-df_grid_nn_Keras_regressor.mean_test_MSE.max(),2*np.mean(df_grid_nn_Keras_regressor.std_test_MSE[df_grid_nn_Keras_regressor.mean_test_MSE == df_grid_nn_Keras_regressor.mean_test_MSE.max()])))
-print('Neural network regressor CV validation MAD: %g +-%g' % (df_grid_nn_Keras_regressor.mean_test_MAD.min(),2*np.mean(df_grid_nn_Keras_regressor.std_test_MAD[df_grid_nn_Keras_regressor.mean_test_MAD == df_grid_nn_Keras_regressor.mean_test_MAD.min()])))
-print('Neural network regressor CV validation accuracy: %g +-%g' % (df_grid_nn_Keras_regressor.mean_test_accuracy.max(),2*np.mean(df_grid_nn_Keras_regressor.std_test_accuracy[df_grid_nn_Keras_regressor.mean_test_accuracy == df_grid_nn_Keras_regressor.mean_test_accuracy.max()])))
+print('Neural network regressor CV best validation MSE: %g +-%g' % (-df_grid_nn_Keras_regressor.mean_test_MSE.max(),2*np.mean(df_grid_nn_Keras_regressor.std_test_MSE[df_grid_nn_Keras_regressor.mean_test_MSE == df_grid_nn_Keras_regressor.mean_test_MSE.max()])))
+print('Neural network regressor CV corresponding validation MAD: %g +-%g' % (-df_grid_nn_Keras_regressor.mean_test_MAD[df_grid_nn_Keras_regressor.mean_test_MSE == df_grid_nn_Keras_regressor.mean_test_MSE.max()],2*np.mean(df_grid_nn_Keras_regressor.std_test_MAD[df_grid_nn_Keras_regressor.mean_test_MSE == df_grid_nn_Keras_regressor.mean_test_MSE.max()])))
+print('Neural network regressor CV corresponding validation accuracy: %g +-%g' % (df_grid_nn_Keras_regressor.mean_test_accuracy[df_grid_nn_Keras_regressor.mean_test_MSE == df_grid_nn_Keras_regressor.mean_test_MSE.max()],2*np.mean(df_grid_nn_Keras_regressor.std_test_accuracy[df_grid_nn_Keras_regressor.mean_test_MSE == df_grid_nn_Keras_regressor.mean_test_MSE.max()])))
 
 #plot heatmap of results
-heatmap(grid_nn_Keras_regressor_MSE, 'Neural network regressor MSE (CV), '+ wine_type, '\u03BB', 'parameters', col_names_nn_Keras_regressor, row_names_nn_Keras_regressor, True, savefig = True, figname = 'Images/NN_reg_MSE_' + wine_type + '.png')
-heatmap(grid_nn_Keras_regressor_MAD, 'Neural network regressor MAD (CV), '+ wine_type, '\u03BB', 'parameters', col_names_nn_Keras_regressor, row_names_nn_Keras_regressor, True, savefig = True, figname = 'Images/NN_reg_MAD_' + wine_type + '.png')
-heatmap(grid_nn_Keras_regressor_accuracy, 'Neural network regressor MSE (CV), '+ wine_type, '\u03BB', 'parameters', col_names_nn_Keras_regressor, row_names_nn_Keras_regressor, True, savefig = True, figname = 'Images/NN_reg_accuracy_' + wine_type + '.png')
+heatmap(-grid_nn_Keras_regressor_MSE, 'Neural network regressor MSE (CV), '+ wine_type, '\u03BB', 'parameters', col_names_nn_Keras_regressor, row_names_nn_Keras_regressor, True, savefig = True, figname = 'Images/NN_reg_MSE_' + wine_type + '.png')
+heatmap(-grid_nn_Keras_regressor_MAD, 'Neural network regressor MAD (CV), '+ wine_type, '\u03BB', 'parameters', col_names_nn_Keras_regressor, row_names_nn_Keras_regressor, True, savefig = True, figname = 'Images/NN_reg_MAD_' + wine_type + '.png')
+heatmap(grid_nn_Keras_regressor_accuracy, 'Neural network regressor accuracy (CV), '+ wine_type, '\u03BB', 'parameters', col_names_nn_Keras_regressor, row_names_nn_Keras_regressor, True, savefig = True, figname = 'Images/NN_reg_accuracy_' + wine_type + '.png')
 
 #refit best NN regressor
 print(clf.best_params_)
-nnKerasRegBest = KerasRegressor(build_fn=build_network, n_outputs=y_onehot.shape[1], output_activation = 'softmax', loss="categorical_crossentropy",verbose=0)
+nnKerasRegBest = KerasRegressor(build_fn=build_network, n_outputs=1, output_activation = None, loss="mean_squared_error",verbose=0)
 nnKerasRegBest.set_params(**clf.best_params_)
-hist = nnKerasRegBest.fit(Xtrain, ytrain_onehot, validation_data=(Xtest,ytest_onehot))
+hist = nnKerasRegBest.fit(Xtrain, ytrain, validation_data=(Xtest,ytest))
 pred_nnKerasRegBest_train = nnKerasRegBest.predict(Xtrain)
 pred_nnKerasRegBest_test = nnKerasRegBest.predict(Xtest)
 print('Neural network regressor MSE train: %g' % mean_squared_error(ytrain,pred_nnKerasRegBest_train))
@@ -230,8 +232,8 @@ print('Neural network regressor accuracy train: %g' % accuracy_score(ytrain,np.r
 print('Neural network regressor accuracy test: %g' % accuracy_score(ytest,np.rint(pred_nnKerasRegBest_test)))
 
 #learning chart for best model (accuracy and loss) and confusion matrix
-plot_several(np.tile(np.arange(clf.best_params_['epochs'])[:,None],[1,2]), np.concatenate((np.reshape(hist.history['accuracy'],(clf.best_params_['epochs'],1)),np.reshape(hist.history['val_accuracy'],(clf.best_params_['epochs'],1))),axis=1), '', ['train','test'], 'epochs', 'accuracy', 'NN classifier learning, ' + wine_type, savefig = savefigs, figname = 'NN_reg_learning_acc' + wine_type + '.png')
-plot_several(np.tile(np.arange(clf.best_params_['epochs'])[:,None],[1,2]), np.concatenate((np.reshape(hist.history['loss'],(clf.best_params_['epochs'],1)),np.reshape(hist.history['val_loss'],(clf.best_params_['epochs'],1))),axis=1), '', ['train','test'], 'epochs', 'accuracy', 'NN classifier learning, ' + wine_type, savefig = savefigs, figname = 'NN_reg_learning_loss' + wine_type + '.png')
+plot_several(np.tile(np.arange(clf.best_params_['epochs'])[:,None],[1,2]), np.concatenate((np.reshape(hist.history['accuracy'],(clf.best_params_['epochs'],1)),np.reshape(hist.history['val_accuracy'],(clf.best_params_['epochs'],1))),axis=1), '', ['train','test'], 'epochs', 'accuracy', 'NN regressor learning, ' + wine_type, savefig = savefigs, figname = 'NN_reg_learning_acc' + wine_type + '.png')
+plot_several(np.tile(np.arange(clf.best_params_['epochs'])[:,None],[1,2]), np.concatenate((np.reshape(hist.history['loss'],(clf.best_params_['epochs'],1)),np.reshape(hist.history['val_loss'],(clf.best_params_['epochs'],1))),axis=1), '', ['train','test'], 'epochs', 'loss', 'NN regressor learning, ' + wine_type, savefig = savefigs, figname = 'NN_reg_learning_loss' + wine_type + '.png')
 heatmap(confusion_matrix(ytest,np.rint(pred_nnKerasRegBest_test)),'NN regressor confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/NN_reg_confusion_' + wine_type + '.png')
 
 ############ XGBoost network regressor ############
@@ -250,13 +252,13 @@ grid_XGBoost_regressor_MAD, _, _ = order_gridSearchCV_data(df_grid_XGBoost_regre
 grid_XGBoost_regressor_accuracy, _, _ = order_gridSearchCV_data(df_grid_XGBoost_regressor, column_param = 'max_depth', score = 'mean_test_accuracy')
 
 #print cv results
-print('XGBoost regressor CV validation MSE: %g +-%g' % (-df_grid_XGBoost_regressor.mean_test_MSE.max(),2*np.mean(df_grid_XGBoost_regressor.std_test_MSE[df_grid_XGBoost_regressor.mean_test_MSE == df_grid_XGBoost_regressor.mean_test_MSE.max()])))
-print('XGBoost regressor CV validation MAD: %g +-%g' % (df_grid_XGBoost_regressor.mean_test_MAD.min(),2*np.mean(df_grid_XGBoost_regressor.std_test_MAD[df_grid_XGBoost_regressor.mean_test_MAD == df_grid_XGBoost_regressor.mean_test_MAD.min()])))
-print('XGBoost regressor CV validation accuracy: %g +-%g' % (df_grid_XGBoost_regressor.mean_test_accuracy.max(),2*np.mean(df_grid_XGBoost_regressor.std_test_accuracy[df_grid_XGBoost_regressor.mean_test_accuracy == df_grid_XGBoost_regressor.mean_test_accuracy.max()])))
+print('XGBoost regressor CV best validation MSE: %g +-%g' % (-df_grid_XGBoost_regressor.mean_test_MSE.max(),2*np.mean(df_grid_XGBoost_regressor.std_test_MSE[df_grid_XGBoost_regressor.mean_test_MSE == df_grid_XGBoost_regressor.mean_test_MSE.max()])))
+print('XGBoost regressor CV corresponding validation MAD: %g +-%g' % (-np.mean(df_grid_XGBoost_regressor.mean_test_MAD[df_grid_XGBoost_regressor.mean_test_MSE == df_grid_XGBoost_regressor.mean_test_MSE.max()]),2*np.mean(df_grid_XGBoost_regressor.std_test_MAD[df_grid_XGBoost_regressor.mean_test_MSE == df_grid_XGBoost_regressor.mean_test_MSE.max()])))
+print('XGBoost regressor CV corresponding validation accuracy: %g +-%g' % (np.mean(df_grid_XGBoost_regressor.mean_test_accuracy[df_grid_XGBoost_regressor.mean_test_MSE == df_grid_XGBoost_regressor.mean_test_MSE.max()]),2*np.mean(df_grid_XGBoost_regressor.std_test_accuracy[df_grid_XGBoost_regressor.mean_test_MSE == df_grid_XGBoost_regressor.mean_test_MSE.max()])))
 
 #plot heatmap of results
 heatmap(-grid_XGBoost_regressor_MSE, 'XGboost regressor MSE (CV), '+ wine_type, 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_MSE_CV_' + wine_type + '.png')
-heatmap(grid_XGBoost_regressor_MAD, 'XGboost regressor MAD (CV), '+ wine_type, 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_MAD' + wine_type + '.png')
+heatmap(-grid_XGBoost_regressor_MAD, 'XGboost regressor MAD (CV), '+ wine_type, 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_MAD' + wine_type + '.png')
 heatmap(grid_XGBoost_regressor_accuracy, 'XGboost regressor accuracy (CV), '+ wine_type, 'max_depth', 'parameters', col_names_XGBoost_regressor, row_names_XGBoost_regressor, True, savefig = savefigs, figname = 'Images/XGBoost_reg_accuracy' + wine_type + '.png')
 
 #Fit best XGboost regressor
@@ -294,8 +296,8 @@ heatmap(grid_XGBoost_classifier, 'XGboost classifier (CV), '+ wine_type, 'max_de
 #Best XGboost classifier
 XGBoost_classifier = XGBClassifier(**clf.best_params_)
 XGBoost_classifier.fit(Xtrain,ytrain.ravel())
-pred_XGBoost_classifier_train = XGBoost_regressor.predict(Xtrain)
-pred_XGBoost_classifier_test = XGBoost_regressor.predict(Xtest)
+pred_XGBoost_classifier_train = XGBoost_classifier.predict(Xtrain)
+pred_XGBoost_classifier_test = XGBoost_classifier.predict(Xtest)
 print('XGboost classifier accuracy train: %g' % accuracy_score(ytrain,pred_XGBoost_classifier_train))
 print('XGboost classifier accuracy test: %g' % accuracy_score(ytest,pred_XGBoost_classifier_test))
 
@@ -314,11 +316,13 @@ df_grid_Ridge_regression = pd.DataFrame.from_dict(clf.cv_results_)
 
 #plot heatmap of results
 heatmap(-df_grid_Ridge_regression['mean_test_MSE'].to_numpy()[:,None], 'Ridge MSE (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_MSE_CV_' + wine_type + '.png')
-heatmap(df_grid_Ridge_regression['mean_test_MAD'].to_numpy()[:,None], 'Ridge MAD (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_MAD_CV_' + wine_type + '.png')
+heatmap(-df_grid_Ridge_regression['mean_test_MAD'].to_numpy()[:,None], 'Ridge MAD (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_MAD_CV_' + wine_type + '.png')
 heatmap(df_grid_Ridge_regression['mean_test_accuracy'].to_numpy()[:,None], 'Ridge accuracy (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_accuracy_CV_' + wine_type + '.png')
-print('Ridge regression CV validation MSE: %g +-%g' % (-df_grid_Ridge_regression.mean_test_MSE.max(),2*np.mean(df_grid_Ridge_regression.std_test_MSE[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
-print('Ridge regression CV validation MAD: %g +-%g' % (df_grid_Ridge_regression.mean_test_MAD.min(),2*np.mean(df_grid_Ridge_regression.std_test_MAD[df_grid_Ridge_regression.mean_test_MAD == df_grid_Ridge_regression.mean_test_MAD.min()])))
-print('Ridge regression CV validation accuracy: %g +-%g' % (df_grid_Ridge_regression.mean_test_accuracy.max(),2*np.mean(df_grid_Ridge_regression.std_test_accuracy[df_grid_Ridge_regression.mean_test_accuracy == df_grid_Ridge_regression.mean_test_accuracy.max()])))
+
+#print cv results
+print('Ridge regression CV best validation MSE: %g +-%g' % (-df_grid_Ridge_regression.mean_test_MSE.max(),2*np.mean(df_grid_Ridge_regression.std_test_MSE[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
+print('Ridge regression CV corresponding validation MAD: %g +-%g' % (-np.mean(df_grid_Ridge_regression.mean_test_MAD[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()]),2*np.mean(df_grid_Ridge_regression.std_test_MAD[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
+print('Ridge regression CV corresponding validation accuracy: %g +-%g' % (np.mean(df_grid_Ridge_regression.mean_test_accuracy[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()]),2*np.mean(df_grid_Ridge_regression.std_test_accuracy[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
 
 #Refitting best Ridge regression
 RidgeBest = Ridge(**clf.best_params_)
@@ -338,7 +342,7 @@ heatmap(confusion_matrix(ytest,np.rint(pred_RidgeBest_test)),'Ridge regression c
 #intermezzo - estimate Ridge model variance using bootstrap and cv
 error, bias, variance = bootstrap_bias_variance_MSE(RidgeBest, Xtrain, ytrain, 100, Xtest, ytest)
 print('With bootstrap: Ridge MSE=%g Ridge bias:=%g Ridge variance:=%g' % (error, bias, variance))
-MSE_val, MSE_test, R2_val, bias_test_plus_noise, variance_test = cv(RidgeBest, 5, mean_squared_error, Xtrain, ytrain, Xtest, ytest)
+MSE_val, MSE_test, R2_val, bias_test_plus_noise, variance_test = crossVal(RidgeBest, 5, mean_squared_error, Xtrain, ytrain, Xtest, ytest)
 
 ######### SUPPORT VECTOR MACHINE classifier #########
 print('-------------SVM classifier------------')
@@ -357,7 +361,7 @@ for i, gamma in enumerate(gamma_vals):
         if cv_mean > cv_mean_max:
         	cv_mean_max = cv_mean
         	cv_std_best = np.std(cv_)
-        print('C = %g, gamma = %g, accuracy = %g' % (C,gamma,scores))
+        print('C = %g, gamma = %g, accuracy = %g' % (C,gamma,cv_mean))
 
 print('CV best accuracy score tuned SVMc: %0.3f (+/- %0.3f)' % (cv_mean_max, cv_std_best*2))
 
@@ -440,7 +444,7 @@ test_mse = np.zeros((len(C_vals), len(gamma_vals)))
 for i, gamma in enumerate(gamma_vals):
     for j, C in enumerate(C_vals):
         model = svm.SVR(kernel = 'rbf', C = C, gamma = gamma)
-        cv_ = cross_validate(model, X_, y, cv = cv, scoring = 'neg_mean_squared_error', n_jobs = -1, verbose = 0, return_train_score = True)
+        cv_ = cross_validate(model, Xtrain, ytrain.ravel(), cv = cv, scoring = 'neg_mean_squared_error', n_jobs = -1, verbose = 0, return_train_score = True)
         scores = np.mean(-cv_['test_score'])
         test_mse[i][j] = np.mean(-cv_['test_score'])
         print('C = ', C)
@@ -456,8 +460,8 @@ ax.set_title("MSE test data")
 ax.set_ylabel("$\gamma$")
 ax.set_xlabel("C")
 fig.savefig('./Images/heatmap_svmreg_test.png')
-plt.clf()
-#plt.show()
+#plt.clf()
+plt.show()
 
 # Find the C and gamma value giving the minimum MSE
 result = np.where(test_mse == np.amin(test_mse))
@@ -468,7 +472,7 @@ print('Optimal gamma value regression:', gamma_best)
 
 #Optimized model
 SVMr_opt = svm.SVR(kernel = 'rbf', gamma = gamma_best, C = C_best)
-cv_SVMr_tuned = cross_validate(SVMr_opt, X_, y, cv = cv, n_jobs = -1, scoring = reg_scoring, return_train_score = False)
+cv_SVMr_tuned = cross_validate(SVMr_opt, Xtrain, ytrain.ravel(), cv = cv, n_jobs = -1, scoring = reg_scoring, return_train_score = False)
 print('SVM regressor tuned MSE (CV): %0.3f (+/- %0.3f)' % (-cv_SVMr_tuned['test_MSE'].mean(), cv_SVMr_tuned['test_MSE'].std()*2))
 print('SVM regressor tuned R2 (CV): %0.3f (+/- %0.3f)' % (cv_SVMr_tuned['test_R2'].mean(), cv_SVMr_tuned['test_R2'].std()*2))
 print('SVM regressor tuned MAD (CV): %0.3f (+/- %0.3f)' % (-cv_SVMr_tuned['test_MAD'].mean(), cv_SVMr_tuned['test_MAD'].std()*2))
@@ -501,3 +505,17 @@ export_graphviz(dt_classifier, out_file = 'Images/DT_classifier_simple_' + wine_
 (graph, ) = pydot.graph_from_dot_file('Images/DT_classifier_simple_' + wine_type + '.dot')
 # Write graph to a png file
 graph.write_png('Images/DT_classifier_simple_' + wine_type + '.dot')
+
+#Comparative confusion matrices
+pdb.set_trace()
+#XGBoost regressor vs XGBoost classifier
+heatmap(confusion_matrix(ytest,np.rint(pred_XGBoost_regressor_test))-confusion_matrix(ytest,pred_XGBoost_classifier_test),'XGBoost regressor-classifier confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/XGBoost_reg_clas_confusion_' + wine_type + '.png')
+
+#XGBoost regressor vs neural network regressor
+heatmap(confusion_matrix(ytest,np.rint(pred_XGBoost_regressor_test))-confusion_matrix(ytest,np.rint(pred_nnKerasRegBest_test)),'XGBoost regressor - nn classifier confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/XGBoost_reg_nn_clas_confusion_' + wine_type + '.png')
+
+#Random forest regressor vs Ridge
+heatmap(confusion_matrix(ytest,np.rint(pred_rf_regressor_test))-confusion_matrix(ytest,np.rint(pred_RidgeBest_test)),'Random forest regressor - Ridge regression confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/RF_reg_nn_Ridge_confusion_' + wine_type + '.png')
+
+#NN regressor vs NN classifier
+heatmap(confusion_matrix(ytest,np.rint(pred_nnKerasRegBest_test))-confusion_matrix(ytest,pred_nnKerasBest_test),'NN regressor - NN classifier confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/nn_reg_nn_clas_confusion_' + wine_type + '.png')
