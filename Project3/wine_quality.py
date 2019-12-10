@@ -203,10 +203,12 @@ plot_several(np.tile(np.arange(clf.best_params_['epochs'])[:,None],[1,2]), np.co
 heatmap(confusion_matrix(ytest,pred_nnKerasBest_test),'NN classifier confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/NN_clas_confusion_' + wine_type + '.png')
 
 ############ Neural network regressor ############
+
 print('-------------Neural network regressor------------')
 
 #NN regressor grid search
 parameters = {'layer_sizes':([128,64],[256,128,64],[256,128,64,32]), 'alpha':[0, 0.00001, 0.00003, 0.0001, 0.0003], 'epochs':[30,60,90,120]}
+parameters = {'layer_sizes':([10],[50],[50,20],[128,64]), 'alpha':[0, 0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03], 'epochs':[5, 10, 15, 20, 30,60]}
 nnRegressor = KerasRegressor(build_fn=build_network, n_outputs = 1, output_activation = None, loss="mean_squared_error",verbose=0)
 clf = GridSearchCV(nnRegressor, parameters, scoring = reg_scoring, refit = 'MSE', cv=5, verbose = 0, n_jobs=-1)
 clf.fit(Xtrain, ytrain)
@@ -463,7 +465,7 @@ pred_svm_reg = SVMr_opt.fit(Xtrain, ytrain).predict(Xtest)
 print('MSE SVM test:', mean_squared_error(ytest, pred_svm_reg))
 print('Max prediction SVM:', pred_svm_reg.max())
 print('Min prediction SVM:', pred_svm_reg.min())
-
+	
 #confusion matrix
 heatmap(confusion_matrix(ytest,np.rint(pred_svm_reg)),'SVM regressor confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/SVM_reg_confusion_' + wine_type + '.png')
 
@@ -478,11 +480,11 @@ print('Shallow decision tree classifier accuracy test: %g' % accuracy_score(ytes
 
 # Export the image to a dot file
 ytrain_labels = [str(m) for m in np.unique(ytrain)]
-export_graphviz(dt_classifier, out_file = 'Images/DT_classifier_simple_' + wine_type + '.dot', feature_names = feature_list, rounded = True, precision = 1, filled = True, class_names = ytrain_labels)
+export_graphviz(dt_classifier, out_file = 'Images/DT_classifier_simple_' + wine_type + '.dot', feature_names = feature_list, rounded = True, rotate = True, precision = 1, filled = True, class_names = ytrain_labels)
 # Use dot file to create a graph
 (graph, ) = pydot.graph_from_dot_file('Images/DT_classifier_simple_' + wine_type + '.dot')
 # Write graph to a png file
-graph.write_png('Images/DT_classifier_simple_' + wine_type + '.dot')
+graph.write_png('Images/DT_classifier_simple_' + wine_type + '.png')
 
 #Comparative confusion matrices
 pdb.set_trace()
