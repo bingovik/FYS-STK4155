@@ -7,7 +7,7 @@ import numpy as np
 import random
 import seaborn as sns
 import pdb
-#import pydot
+import pydot
 
 from keras.wrappers.scikit_learn import KerasClassifier, KerasRegressor
 from keras.utils import to_categorical
@@ -24,7 +24,7 @@ from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
 
-#from xgboost import XGBClassifier, XGBRegressor
+from xgboost import XGBClassifier, XGBRegressor
 
 import matplotlib.pyplot as plt
 import matplotlib.patches
@@ -33,7 +33,7 @@ from matplotlib.colors import ListedColormap
 from project3_functions import *
 
 wine_type = 'red' #red or white
-savefigs = True
+savefigs = False
 k = 5 #number of k-fold splits
 
 #read wine data from cvs to Pandas dataframe
@@ -43,23 +43,19 @@ df = pd.read_csv('Data/winequality-' + wine_type + '.csv', sep=';',header=0)
 fig, ax = plt.subplots(figsize = (10,10))
 histplot = df.hist(ax = ax)
 plt.savefig('Images/feature_hist_' + wine_type + '.png', dpi=300, bbox_inches='tight')
-#plt.show()
-plt.clf()
+plt.show()
 
 n_features = df.shape[1]
 
 #Plot correlation matrix
 #heatmap(df.corr(), 'Feature correlation matrix, ' + wine_type, 'Features', 'Features', df.columns.tolist(), df.columns.tolist(), True, format = '.2f', savefig = savefigs, figname = 'Images/corr_matrix_' + wine_type + '.png')
-
 correlation_matrix = df.corr().round(2)
 fig6, ax = plt.subplots(figsize=(12,11))
 sns.heatmap(data=correlation_matrix, annot=True, square = True)
-fig6.suptitle('Feature correlation matrix,' + wine_type + 'dataset', y = 0.9, fontsize = 13)
+fig6.suptitle('Feature correlation matrix,' + wine_type + ' dataset', y = 0.9, fontsize = 13)
 fig6.savefig('./Images/corr_matrix_red' + wine_type + '.png')
-#plt.show()
-plt.clf()
+plt.show()
 
-quit()
 feature_list = list(df.columns[df.columns != 'quality'])
 
 # Create the independent and dependent variables
@@ -119,7 +115,6 @@ clf.fit(Xtrain,ytrain)
 df_grid_Ridge_regression = pd.DataFrame.from_dict(clf.cv_results_)
 
 #plot heatmap of results
-pdb.set_trace()
 heatmap(-df_grid_Ridge_regression['mean_test_MSE'].to_numpy()[:,None], 'Ridge MSE (CV), '+ wine_type, '', 'lambda', [1,2], np.around(np.logspace(-1,2.5,15)[:,None],decimals = 1), True, savefig = savefigs, figname = 'Images/Ridge_reg_MSE_CV_' + wine_type + '.png')
 heatmap(-df_grid_Ridge_regression['mean_test_MAD'].to_numpy()[:,None], 'Ridge MAD (CV), '+ wine_type, '', 'lambda', [1,2], np.around(np.logspace(-1,2.5,15)[:,None],decimals = 1), True, savefig = savefigs, figname = 'Images/Ridge_reg_MAD_CV_' + wine_type + '.png')
 heatmap(df_grid_Ridge_regression['mean_test_accuracy'].to_numpy()[:,None], 'Ridge accuracy (CV), '+ wine_type, '', 'lambda', [1,2], np.around(np.logspace(-1,2.5,15)[:,None],decimals = 1), True, savefig = savefigs, figname = 'Images/Ridge_reg_accuracy_CV_' + wine_type + '.png')
