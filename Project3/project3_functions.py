@@ -17,9 +17,12 @@ import seaborn as sns
 from sklearn.utils import resample
 
 def accuracy_from_regression(y,y_pred):
+    #rounds predictions no nearest integer and calculates
+    #ratio of correct predictions (accuracy)
     return accuracy_score(y,np.rint(y_pred))
 
 def MAD(y_true, y_pred):
+    #calculates mean absolute deviation
     return np.mean(np.abs(y_true.ravel() - y_pred.ravel()))
 
 def build_network(layer_sizes=[50,20],
@@ -32,6 +35,7 @@ def build_network(layer_sizes=[50,20],
                 activation_function = 'relu',
                 output_activation = 'softmax'
                 ):
+        #function to construct a network using Keras/Tensorflow
         model = Sequential()
         #model.add(BatchNormalization())
         if isinstance(layer_sizes, int):
@@ -47,6 +51,7 @@ def build_network(layer_sizes=[50,20],
         return model
 
 def surfPlot(x, y, z, xlabel = 'x', ylabel = 'y', zlabel = 'z', savefig = False, figname = ''):
+    #function collecting commands to show a surfplot using MatPlotLib
     fig = plt.figure()
     ax = fig.gca(projection='3d')
     # Plot the surface.
@@ -66,7 +71,6 @@ def surfPlot(x, y, z, xlabel = 'x', ylabel = 'y', zlabel = 'z', savefig = False,
 
 def sigmoid(x):
     s = 1/(1+np.exp(-x))
-    #s = (x>=0)/(1+np.exp(-x)) + (x<0)*exp(x)/(1+np.exp(x)) 
     return s
 
 def relu(x):
@@ -78,7 +82,9 @@ def softmax(x):
     return exp_term / np.sum(exp_term, axis=1, keepdims=True)
 
 def area_ratio(y_test,y_test_pred, plot = False, title = 'Lift chart', savefig = False, figname = ''):
-    #cumulative gains/lift chart/area ratio
+    #calculate cumulative gains/lift chart/area ratio
+    #boolean variable 'plot' controls whether to show the cumulative gains chart
+    #plot can be save by setting 'savefig' to True and providing a filename to the 'figname' variable
     sorting = np.argsort(-y_test_pred,axis = 0)
     y_test_pred_sorted = y_test_pred[np.squeeze(sorting)]
     y_test_sorted = y_test[np.squeeze(sorting)]
@@ -98,7 +104,7 @@ def area_ratio(y_test,y_test_pred, plot = False, title = 'Lift chart', savefig =
     return area_ratio
 
 def log_loss(y_pred, y, beta):
-    #accepts no categorical or sparse y
+    #loss function. Accepts no categorical or sparse y
     n = len(y)
     categorical_cross_entropy = -(y.T@np.log(y_pred)+(1-y).T@np.log(1-y_pred))/n
     regularization_term = 0.5*_lambda*beta[1:].T@beta[1:]/n
@@ -176,6 +182,9 @@ def heatmap(data, title, xlabel, ylabel, xticks, yticks, annotation, format = '.
     plt.show()
 
 def order_gridSearchCV_data(pandas_df, column_param = '_lambda', score = 'mean_test_score'):
+    #function takes a pandas dataframe containing output from Scikit-Learn's gridsearchcv method
+    #and transforms it to a 2-dimensional array. A variable of choice 'column_param' will be
+    #distributed along the columns while the rest of the parameters will be along the rows.
     col_values = pandas_df['param_'+column_param]
     uniqueColumns = np.asarray(col_values.drop_duplicates())
     data_array = np.empty((int(len(pandas_df.index)/len(uniqueColumns)),len(uniqueColumns)))
@@ -199,34 +208,9 @@ def order_gridSearchCV_data(pandas_df, column_param = '_lambda', score = 'mean_t
     row_names = [w.replace('}', '') for w in row_names]
     return data_array, row_names, uniqueColumns
 
-def order_grid_search_data(param_grid, param_grid_obj, val_acc, column_param = 'alpha'):
-    col_names = param_grid[column_param]
-    row_names = [None]*len(param_grid_obj)
-    datadata = np.zeros((len(param_grid_obj),len(col_names)))
-    for i, g in enumerate(param_grid_obj):
-        for j, alph in enumerate(col_names):
-            if param_grid_obj[i][column_param] == alph:
-                datadata[i,j] = val_acc[i]
-                dict_temp = param_grid_obj[i]
-                del dict_temp[column_param]
-                row_names[i] = str(dict_temp)
-    dd = np.ma.masked_equal(datadata[:,0],0)
-    data_array = np.empty((sum(~dd.mask),len(col_names))) 
-    for c in range(datadata.shape[1]):
-        datacolumn = np.ma.masked_equal(datadata[:,c],0)
-        data_array[:,c] = datacolumn.compressed()
-    ind_list = [i for i, x in enumerate(dd.mask) if not x]
-    row_names = [row_names[i] for i in ind_list]
-    row_names = [w.replace('activation_function', 'a_func') for w in row_names]
-    row_names = [w.replace('layer_sizes', 'nodes') for w in row_names]
-    row_names = [w.replace('alpha', '\u03BB') for w in row_names] #alpha with lambda...
-    row_names = [w.replace(' ', '') for w in row_names]
-    row_names = [w.replace('sigmoid', 'sigm') for w in row_names]
-    row_names = [w.replace('{', '') for w in row_names]
-    row_names = [w.replace('}', '') for w in row_names]
-    return data_array, row_names, col_names
-
 def bootstrap_bias_variance_MSE(model, X, y, n_boostraps, X_test, y_test):
+    #function uses bootstrapping to calculate bias/variance from 'model' applied to 'X'
+    #and 'y' and tested on 'X__test' and 'y_test'
     y_pred = np.empty((y_test.shape[0], n_boostraps))
     for i in range(n_boostraps):
         x_, y_ = resample(X, y)
@@ -237,39 +221,3 @@ def bootstrap_bias_variance_MSE(model, X, y, n_boostraps, X_test, y_test):
     bias = np.mean( (y_test - np.mean(y_pred, axis=1, keepdims=True))**2 )
     variance = np.mean( np.var(y_pred, axis=1, keepdims=True) )
     return error, bias, variance
-
-def cross_validation_OLS(x, y, k):
-    n = len(x)
-
-    indexes = np.arange(y.shape[0])
-    np.random.shuffle(indexes)
-    x = x[indexes]
-    y = y[indexes]
-
-    r2_train = []
-    r2_test = []
-    mse_train = []
-    mse_test = []
-
-    for i in range(k):
-        x_train = np.concatenate((x[:int(i*n/k)], x[int((i + 1)*n/k): ]), axis = 0)
-        x_test = x[int(i*n/k):int((i + 1)*n/k)]
-        y_train = np.concatenate((y[:int(i*n/k)], y[int((i + 1)*n/k): ]), axis = 0)
-        y_test = y[int(i*n/k):int((i + 1)*n/k)]
-
-        beta = np.linalg.pinv(x_train.T.dot(x_train)).dot(x_train.T).dot(y_train)
-        ytilde = x_train @ beta
-        ypredict = x_test @ beta
-
-        mse_train.append(mean_squared_error(y_train, ytilde))
-        mse_test.append(mean_squared_error(y_test, ypredict))
-
-        r2_train.append(r2_score(y_train, ytilde))
-        r2_test.append(r2_score(y_test, ypredict))
-
-    r2_train = np.array(r2_train)
-    r2_test = np.array(r2_test)
-    mse_train = np.array(mse_train)
-    mse_test = np.array(mse_test)
-
-    return mse_train, mse_test, r2_train, r2_test

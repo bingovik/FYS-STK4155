@@ -32,7 +32,7 @@ from matplotlib.colors import ListedColormap
 
 from project3_functions import *
 
-wine_type = 'white' #red or white
+wine_type = 'red' #red or white
 savefigs = True
 k = 5 #number of k-fold splits
 
@@ -76,17 +76,68 @@ cv = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
 
 ############ Logistic regression ############
 print('-------------Logistic regression------------')
-reg = LogisticRegression(solver = 'lbfgs', max_iter = 10000, multi_class = 'auto')
-scores_logreg = cross_val_score(reg, Xtrain, ytrain.ravel(), cv = cv)
-print('CV accuracy score LogReg: %0.3f (+/- %0.3f)' % (scores_logreg.mean(), scores_logreg.std()*2))
 
-#refit logistic regression and predicting on separate test set
-pred_logreg = reg.fit(Xtrain, ytrain.ravel()).predict(Xtest)
-print('Accuracy LOGREG test:', accuracy_score(ytest, pred_logreg))
-print(classification_report(ytest, pred_logreg))
+#logistic regression grid search
+parameters = {'C':np.logspace(-1,1,15)}
+logReg = LogisticRegression(max_iter = 1000, solver = 'lbfgs', multi_class = 'auto', random_state=42)
+clf = GridSearchCV(logReg, parameters, scoring = 'accuracy', cv=k, verbose = 0, n_jobs=-1)
+clf.fit(Xtrain,ytrain.ravel())
+df_grid_logReg = pd.DataFrame.from_dict(clf.cv_results_)
+
+#plot heatmap of results
+heatmap(df_grid_logReg['mean_test_score'].to_numpy()[:,None], 'Logistic regression accuracy (CV), '+ wine_type, '', 'C', [1,2], np.around(np.logspace(-1,2.5,15)[:,None],decimals = 1), True, savefig = savefigs, figname = 'Images/LogReg_accuracy_CV_' + wine_type + '.png')
+
+#Best logistic regression
+logRegBest = LogisticRegression(**clf.best_params_, random_state=42)
+logRegBest.fit(Xtrain,ytrain.ravel())
+pred_logRegBest_train = logRegBest.predict(Xtrain)
+pred_logRegBest_test = logRegBest.predict(Xtest)
+print('Logistic regression accuracy train: %g' % accuracy_score(ytrain, pred_logRegBest_train))
+print('Logist regression accuracy test: %g' % accuracy_score(ytest, pred_logRegBest_test))
 
 #confusion matrix
-heatmap(confusion_matrix(ytest,pred_logreg),'Logistic regression confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/LR_confusion_' + wine_type + '.png')
+heatmap(confusion_matrix(ytest,pred_logRegBest_test),'Logistic regression confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/LR_confusion_' + wine_type + '.png')
+
+############ Ridge regression ############
+print('-------------Ridge regression------------')
+
+#Ridge regression grid search
+parameters = {'alpha':np.logspace(-1,2.5,15)}
+Ridge_regression = Ridge()
+clf = GridSearchCV(Ridge_regression, parameters, scoring = reg_scoring, refit = 'MSE', cv=k, verbose = 0, n_jobs=-1)
+clf.fit(Xtrain,ytrain)
+df_grid_Ridge_regression = pd.DataFrame.from_dict(clf.cv_results_)
+
+#plot heatmap of results
+pdb.set_trace()
+heatmap(-df_grid_Ridge_regression['mean_test_MSE'].to_numpy()[:,None], 'Ridge MSE (CV), '+ wine_type, '', 'lambda', [1,2], np.around(np.logspace(-1,2.5,15)[:,None],decimals = 1), True, savefig = savefigs, figname = 'Images/Ridge_reg_MSE_CV_' + wine_type + '.png')
+heatmap(-df_grid_Ridge_regression['mean_test_MAD'].to_numpy()[:,None], 'Ridge MAD (CV), '+ wine_type, '', 'lambda', [1,2], np.around(np.logspace(-1,2.5,15)[:,None],decimals = 1), True, savefig = savefigs, figname = 'Images/Ridge_reg_MAD_CV_' + wine_type + '.png')
+heatmap(df_grid_Ridge_regression['mean_test_accuracy'].to_numpy()[:,None], 'Ridge accuracy (CV), '+ wine_type, '', 'lambda', [1,2], np.around(np.logspace(-1,2.5,15)[:,None],decimals = 1), True, savefig = savefigs, figname = 'Images/Ridge_reg_accuracy_CV_' + wine_type + '.png')
+
+#print cv results
+print('Ridge regression CV best validation MSE: %g +-%g' % (-df_grid_Ridge_regression.mean_test_MSE.max(),2*np.mean(df_grid_Ridge_regression.std_test_MSE[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
+print('Ridge regression CV corresponding validation MAD: %g +-%g' % (-np.mean(df_grid_Ridge_regression.mean_test_MAD[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()]),2*np.mean(df_grid_Ridge_regression.std_test_MAD[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
+print('Ridge regression CV corresponding validation accuracy: %g +-%g' % (np.mean(df_grid_Ridge_regression.mean_test_accuracy[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()]),2*np.mean(df_grid_Ridge_regression.std_test_accuracy[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
+
+#Refitting best Ridge regression
+RidgeBest = Ridge(**clf.best_params_)
+RidgeBest.fit(Xtrain,ytrain)
+pred_RidgeBest_train = RidgeBest.predict(Xtrain)
+pred_RidgeBest_test = RidgeBest.predict(Xtest)
+print('Ridge MSE train: %g' % mean_squared_error(ytrain,pred_RidgeBest_train))
+print('Ridge MSE test: %g' % mean_squared_error(ytest,pred_RidgeBest_test))
+print('Ridge MAD train: %g' % MAD(ytrain,pred_RidgeBest_train))
+print('Ridge MAD test: %g' % MAD(ytest,pred_RidgeBest_test))
+print('Ridge accuracy train: %g' % accuracy_score(ytrain,np.rint(pred_RidgeBest_train)))
+print('Ridge accuracy test: %g' % accuracy_score(ytest,np.rint(pred_RidgeBest_test)))
+
+#confusion matrix
+heatmap(confusion_matrix(ytest,np.rint(pred_RidgeBest_test)),'Ridge regression confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/Ridge_confusion_' + wine_type + '.png')
+
+#intermezzo - estimate Ridge model variance using bootstrap and cv
+error, bias, variance = bootstrap_bias_variance_MSE(RidgeBest, Xtrain, ytrain, 100, Xtest, ytest)
+print('With bootstrap: Ridge MSE=%g Ridge bias:=%g Ridge variance:=%g' % (error, bias, variance))
+MSE_val, MSE_test, R2_val, bias_test_plus_noise, variance_test = crossVal(RidgeBest, 5, mean_squared_error, Xtrain, ytrain, Xtest, ytest)
 
 ############ Random forest classifier ############
 print('-------------Random forest classifier------------')
@@ -305,46 +356,6 @@ print('XGboost classifier accuracy test: %g' % accuracy_score(ytest,pred_XGBoost
 
 #confusion matrix
 heatmap(confusion_matrix(ytest,pred_XGBoost_classifier_test),'XGBoost classifier confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/XGBoost_clas_confusion_' + wine_type + '.png')
-
-############ Ridge regression ############
-print('-------------Ridge regression------------')
-
-#Ridge regression grid search
-parameters = {'alpha':np.logspace(-1,2.5,15)}
-Ridge_regression = Ridge()
-clf = GridSearchCV(Ridge_regression, parameters, scoring = reg_scoring, refit = 'MSE', cv=k, verbose = 0, n_jobs=-1)
-clf.fit(Xtrain,ytrain)
-df_grid_Ridge_regression = pd.DataFrame.from_dict(clf.cv_results_)
-
-#plot heatmap of results
-heatmap(-df_grid_Ridge_regression['mean_test_MSE'].to_numpy()[:,None], 'Ridge MSE (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_MSE_CV_' + wine_type + '.png')
-heatmap(-df_grid_Ridge_regression['mean_test_MAD'].to_numpy()[:,None], 'Ridge MAD (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_MAD_CV_' + wine_type + '.png')
-heatmap(df_grid_Ridge_regression['mean_test_accuracy'].to_numpy()[:,None], 'Ridge accuracy (CV), '+ wine_type, '', 'lambda', [1,2], np.logspace(-1,2.5,15)[:,None], True, savefig = savefigs, figname = 'Images/Ridge_reg_accuracy_CV_' + wine_type + '.png')
-
-#print cv results
-print('Ridge regression CV best validation MSE: %g +-%g' % (-df_grid_Ridge_regression.mean_test_MSE.max(),2*np.mean(df_grid_Ridge_regression.std_test_MSE[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
-print('Ridge regression CV corresponding validation MAD: %g +-%g' % (-np.mean(df_grid_Ridge_regression.mean_test_MAD[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()]),2*np.mean(df_grid_Ridge_regression.std_test_MAD[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
-print('Ridge regression CV corresponding validation accuracy: %g +-%g' % (np.mean(df_grid_Ridge_regression.mean_test_accuracy[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()]),2*np.mean(df_grid_Ridge_regression.std_test_accuracy[df_grid_Ridge_regression.mean_test_MSE == df_grid_Ridge_regression.mean_test_MSE.max()])))
-
-#Refitting best Ridge regression
-RidgeBest = Ridge(**clf.best_params_)
-RidgeBest.fit(Xtrain,ytrain)
-pred_RidgeBest_train = RidgeBest.predict(Xtrain)
-pred_RidgeBest_test = RidgeBest.predict(Xtest)
-print('Ridge MSE train: %g' % mean_squared_error(ytrain,pred_RidgeBest_train))
-print('Ridge MSE test: %g' % mean_squared_error(ytest,pred_RidgeBest_test))
-print('Ridge MAD train: %g' % MAD(ytrain,pred_RidgeBest_train))
-print('Ridge MAD test: %g' % MAD(ytest,pred_RidgeBest_test))
-print('Ridge accuracy train: %g' % accuracy_score(ytrain,np.rint(pred_RidgeBest_train)))
-print('Ridge accuracy test: %g' % accuracy_score(ytest,np.rint(pred_RidgeBest_test)))
-
-#confusion matrix
-heatmap(confusion_matrix(ytest,np.rint(pred_RidgeBest_test)),'Ridge regression confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/Ridge_confusion_' + wine_type + '.png')
-
-#intermezzo - estimate Ridge model variance using bootstrap and cv
-error, bias, variance = bootstrap_bias_variance_MSE(RidgeBest, Xtrain, ytrain, 100, Xtest, ytest)
-print('With bootstrap: Ridge MSE=%g Ridge bias:=%g Ridge variance:=%g' % (error, bias, variance))
-MSE_val, MSE_test, R2_val, bias_test_plus_noise, variance_test = crossVal(RidgeBest, 5, mean_squared_error, Xtrain, ytrain, Xtest, ytest)
 
 ######### SUPPORT VECTOR MACHINE classifier #########
 print('-------------SVM classifier------------')
