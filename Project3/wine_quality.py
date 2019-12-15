@@ -7,7 +7,7 @@ import numpy as np
 import random
 import seaborn as sns
 import pdb
-import pydot
+#import pydot
 
 from keras.wrappers.scikit_learn import KerasClassifier, KerasRegressor
 from keras.utils import to_categorical
@@ -24,7 +24,7 @@ from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
 
-from xgboost import XGBClassifier, XGBRegressor
+#from xgboost import XGBClassifier, XGBRegressor
 
 import matplotlib.pyplot as plt
 import matplotlib.patches
@@ -40,16 +40,26 @@ k = 5 #number of k-fold splits
 df = pd.read_csv('Data/winequality-' + wine_type + '.csv', sep=';',header=0)
 
 #histogram of features
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize = (10,10))
 histplot = df.hist(ax = ax)
 plt.savefig('Images/feature_hist_' + wine_type + '.png', dpi=300, bbox_inches='tight')
-plt.show()
+#plt.show()
+plt.clf()
 
 n_features = df.shape[1]
 
 #Plot correlation matrix
-heatmap(df.corr(), 'Feature correlation matrix, ' + wine_type, 'Features', 'Features', df.columns.tolist(), df.columns.tolist(), True, savefig = savefigs, figname = 'Images/corr_matrix_' + wine_type + '.png')
+#heatmap(df.corr(), 'Feature correlation matrix, ' + wine_type, 'Features', 'Features', df.columns.tolist(), df.columns.tolist(), True, format = '.2f', savefig = savefigs, figname = 'Images/corr_matrix_' + wine_type + '.png')
 
+correlation_matrix = df.corr().round(2)
+fig6, ax = plt.subplots(figsize=(12,11))
+sns.heatmap(data=correlation_matrix, annot=True, square = True)
+fig6.suptitle('Feature correlation matrix,' + wine_type + 'dataset', y = 0.9, fontsize = 13)
+fig6.savefig('./Images/corr_matrix_red' + wine_type + '.png')
+#plt.show()
+plt.clf()
+
+quit()
 feature_list = list(df.columns[df.columns != 'quality'])
 
 # Create the independent and dependent variables
@@ -299,7 +309,7 @@ clf = GridSearchCV(XGBoost_regressor, parameters, scoring = reg_scoring, refit =
 clf.fit(Xtrain,ytrain)
 df_grid_XGBoost_regressor = pd.DataFrame.from_dict(clf.cv_results_)
 
-#order data into matrix 
+#order data into matrix
 grid_XGBoost_regressor_MSE, row_names_XGBoost_regressor, col_names_XGBoost_regressor = order_gridSearchCV_data(df_grid_XGBoost_regressor, column_param = 'max_depth', score = 'mean_test_MSE')
 grid_XGBoost_regressor_MAD, _, _ = order_gridSearchCV_data(df_grid_XGBoost_regressor, column_param = 'max_depth', score = 'mean_test_MAD')
 grid_XGBoost_regressor_accuracy, _, _ = order_gridSearchCV_data(df_grid_XGBoost_regressor, column_param = 'max_depth', score = 'mean_test_accuracy')
@@ -386,9 +396,9 @@ ax.set_yticklabels(gamma_vals)
 ax.set_title("Accuracy test data")
 ax.set_ylabel("$\gamma$")
 ax.set_xlabel("C")
-fig.savefig('./Images/heatmap_svmclass1.png')
-#plt.clf()
-plt.show()
+fig.savefig('./Images/heatmap_svmclass_red.png')
+plt.clf()
+#plt.show()
 
 # Find the C and gamma value giving the maximum accuracy
 result = np.where(test_acc == np.amax(test_acc))
@@ -396,39 +406,6 @@ C_best = C_vals[result[1][0]]
 gamma_best = gamma_vals[result[0][0]]
 print('Optimal C value classification:', C_best)
 print('Optimal gamma value classification:', gamma_best)
-
-# Some more plots to show the distribution of the C and gammas
-ngammas = 100
-gammas = np.logspace(-4, 4, ngammas)
-test_acc_g = np.zeros(ngammas)
-i = 0
-for gam in gammas:
-    model = svm.SVC(kernel='rbf', gamma = gam)
-    cv_ = cross_val_score(model, Xtrain, ytrain.ravel(), cv = cv, n_jobs = -1, verbose = 0)
-    test_acc_g[i] = np.mean(cv_)
-    i += 1
-
-nc = 100
-cs = np.logspace(-4, 4, ngammas)
-test_acc_c = np.zeros(ngammas)
-i = 0
-for c in cs:
-    model = svm.SVC(kernel='rbf', C = c, gamma = 'auto')
-    cv_ = cross_val_score(model, Xtrain, ytrain.ravel(), cv = cv, n_jobs = -1, verbose = 0)
-    test_acc_c[i] = np.mean(cv_)
-    i += 1
-
-fig1, (ax1, ax2) = plt.subplots(1, 2, sharey = True)
-ax1.plot(np.log10(cs), test_acc_c, 'tab:orange')
-ax1.set_title('C parameter')
-ax1.set_ylabel('Accuracy score')
-ax1.set_xlabel('log10(C)')
-ax2.plot(np.log10(gammas), test_acc_g, 'tab:green')
-ax2.set_title('$\gamma$ parameter')
-ax2.set_xlabel('log10($\gamma$)')
-fig1.savefig('./Images/C_gamma_parameters')
-#plt.clf()
-plt.show()
 
 ##### Final test on unseen data, bootstrapped to get error bars
 SVM_opt = svm.SVC(kernel='rbf', C = C_best, gamma = gamma_best)
@@ -438,6 +415,7 @@ print(classification_report(ytest, pred_svm))
 
 #confusion matrix
 heatmap(confusion_matrix(ytest,pred_svm),'SVM classifier confusion matrix, ' + wine_type, 'predicted', 'actual', np.unique(ytest), np.unique(ytest), True, format = '.0f', cmap = 'viridis', savefig = savefigs, figname = 'Images/SVM_clas_confusion_' + wine_type + '.png')
+plt.clf()
 
 ############ SVM REGRESSOR ############
 print('-------------Support vector machine regressor------------')
@@ -472,9 +450,9 @@ ax.set_xticklabels(C_vals)
 ax.set_title("MSE test data")
 ax.set_ylabel("$\gamma$")
 ax.set_xlabel("C")
-fig.savefig('./Images/heatmap_svmreg_test.png')
-#plt.clf()
-plt.show()
+fig.savefig('./Images/heatmap_svmreg_test_red.png')
+plt.clf()
+#plt.show()
 
 # Find the C and gamma value giving the minimum MSE
 result = np.where(test_mse == np.amin(test_mse))
